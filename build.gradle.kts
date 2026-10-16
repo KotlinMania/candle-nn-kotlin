@@ -1409,9 +1409,15 @@ gradle.includedBuilds.forEach { ib ->
                     from(File(ib.projectDir, "native/node-$ibFfiLower"))
                     into(layout.buildDirectory.dir("wasm/node_modules/@kotlinmania/$ibFfiLower-native-bindings"))
                 }
-            tasks.matching { it.name.startsWith("jsNodeTest") || it.name.startsWith("wasmJsNodeTest") }.configureEach {
-                dependsOn(copyIbNode, copyIbWasmNode)
-            }
+            tasks
+                .matching {
+                    it.name.startsWith("jsNodeTest") ||
+                        it.name.startsWith("jsBrowserTest") ||
+                        it.name.startsWith("wasmJsNodeTest") ||
+                        it.name.startsWith("wasmJsBrowserTest")
+                }.configureEach {
+                    dependsOn(copyIbNode, copyIbWasmNode)
+                }
         }
     }
 }
