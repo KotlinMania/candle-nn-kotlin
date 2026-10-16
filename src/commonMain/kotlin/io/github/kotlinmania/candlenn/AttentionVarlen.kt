@@ -1,7 +1,6 @@
 // port-lint: source attention/varlen.rs
 package io.github.kotlinmania.candlenn
 
-import io.github.kotlinmania.candle.DType
 import io.github.kotlinmania.candle.Device
 import io.github.kotlinmania.candle.Shape
 import io.github.kotlinmania.candle.Tensor
@@ -203,7 +202,7 @@ private fun createWindowMaskBatch(
         }
     } else if (windowRight == null) {
         for (idx in 0 until seqLenQ * seqLenK) {
-            mask.add(0.0f)
+            mask.add(if (idx >= 0) 0.0f else 0.0f)
         }
     } else {
         bail("windowRight specified without windowLeft")

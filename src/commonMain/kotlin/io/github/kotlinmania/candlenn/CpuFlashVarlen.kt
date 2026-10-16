@@ -1,7 +1,6 @@
 // port-lint: source attention/cpu_flash/varlen.rs
 package io.github.kotlinmania.candlenn
 
-import io.github.kotlinmania.candle.CpuStorage
 import io.github.kotlinmania.candle.DType
 import io.github.kotlinmania.candle.Device
 import io.github.kotlinmania.candle.Float16Utils

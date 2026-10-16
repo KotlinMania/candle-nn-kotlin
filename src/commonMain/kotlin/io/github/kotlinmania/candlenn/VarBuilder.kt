@@ -895,7 +895,7 @@ public class ShardedSafeTensors(
         val rank = h.rank
         val worldSize = h.worldSize
         val view = inner.get(name).getOrThrow()
-        val viewDtype = tryFrom(view.wireDtype).getOrThrow()
+        tryFrom(view.wireDtype).getOrThrow()
         val shape = view.tensorShape.toMutableList()
         val size = shape[dim]
         if (size % worldSize != 0) {

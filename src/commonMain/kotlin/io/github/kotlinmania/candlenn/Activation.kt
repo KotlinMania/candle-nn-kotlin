@@ -1,7 +1,6 @@
 // port-lint: source activation.rs
 package io.github.kotlinmania.candlenn
 
-import io.github.kotlinmania.candle.D
 import io.github.kotlinmania.candle.Module
 import io.github.kotlinmania.candle.Shape
 import io.github.kotlinmania.candle.Tensor

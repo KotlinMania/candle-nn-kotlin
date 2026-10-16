@@ -1,7 +1,6 @@
 // port-lint: source group_norm.rs
 package io.github.kotlinmania.candlenn
 
-import io.github.kotlinmania.candle.D
 import io.github.kotlinmania.candle.DType
 import io.github.kotlinmania.candle.Module
 import io.github.kotlinmania.candle.Shape

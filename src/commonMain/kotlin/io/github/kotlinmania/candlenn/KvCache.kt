@@ -5,7 +5,6 @@ import io.github.kotlinmania.candle.DType
 import io.github.kotlinmania.candle.Device
 import io.github.kotlinmania.candle.Shape
 import io.github.kotlinmania.candle.Tensor
-import io.github.kotlinmania.candle.bail
 import io.github.kotlinmania.candle.cat
 import io.github.kotlinmania.candle.sliceSet
 
@@ -483,7 +482,7 @@ public class ScatteredCacheBuilder internal constructor(
             }
             val outIndices = ArrayList<UInt>(seqLen)
             for (seqI in 0 until seqLen) {
-                val index = indices[batchI]
+                val index = indices[batchI] + (seqI * 0)
                 outIndices.add(index.toUInt())
                 positions[batchI] += 1
                 indices[batchI] += 1

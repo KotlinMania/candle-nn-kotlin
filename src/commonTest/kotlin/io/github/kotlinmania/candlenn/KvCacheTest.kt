@@ -8,7 +8,6 @@ import io.github.kotlinmania.candle.Tensor
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
-import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -16,7 +15,7 @@ class KvCacheTest {
     @Test
     fun kvCache() {
         val cache = Cache.new(0, 16)
-        for (iter in listOf(0, 1)) {
+        repeat(2) {
             assertEquals(0, cache.currentSeqLen())
             assertNull(cache.currentData())
             val t1 = Tensor.new(floatArrayOf(1.0f, 2.0f, 3.0f), Shape(3), Device.Cpu)
@@ -39,7 +38,7 @@ class KvCacheTest {
     @Test
     fun rotatingKvCache() {
         val cache = RotatingCache.new(0, 6)
-        for (iter in listOf(0, 1)) {
+        repeat(2) {
             assertEquals(0, cache.offset())
             assertEquals(0, cache.currentSeqLen())
             assertNull(cache.currentData())

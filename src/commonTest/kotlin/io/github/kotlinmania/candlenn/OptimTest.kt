@@ -17,7 +17,7 @@ class OptimTest {
         val x = Var.fromTensor(Tensor.new(floatArrayOf(0.0f), Shape.SCALAR, Device.Cpu))
         val sgd = SGD.new(listOf(x), 0.1)
         val xt = x.asTensor()
-        for (step in 0 until 100) {
+        repeat(100) {
             val loss = xt.sub(4.2).mul(xt.sub(4.2))
             sgd.backwardStep(loss)
         }
@@ -45,7 +45,7 @@ class OptimTest {
         val b = Var.fromTensor(Tensor.new(floatArrayOf(0.0f), Shape.SCALAR, Device.Cpu))
         val sgd = SGD.new(listOf(w, b), 0.004)
         val lin = Linear.new(w.asTensor(), b.asTensor())
-        for (step in 0 until 1000) {
+        repeat(1000) {
             val ys = lin.forward(sampleXs)
             val loss = ys.sub(sampleYs).sqr().sumAll()
             sgd.backwardStep(loss)
@@ -76,7 +76,7 @@ class OptimTest {
         val params = ParamsAdamW(lr = 0.1)
         val opt = AdamW.new(listOf(w, b), params)
         val lin = Linear.new(w.asTensor(), b.asTensor())
-        for (step in 0 until 100) {
+        repeat(100) {
             val ys = lin.forward(sampleXs)
             val loss = ys.sub(sampleYs).sqr().sumAll()
             opt.backwardStep(loss)
@@ -108,7 +108,7 @@ class OptimTest {
         val params = ParamsAdamW(lr = 0.1)
         val opt = AdamW.new(varMap.allVars(), params)
         val lin = Linear.new(w, b)
-        for (step in 0 until 100) {
+        repeat(100) {
             val ys = lin.forward(sampleXs)
             val loss = ys.sub(sampleYs).sqr().sumAll()
             opt.backwardStep(loss)

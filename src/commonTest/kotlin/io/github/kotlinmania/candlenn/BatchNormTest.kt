@@ -82,7 +82,7 @@ class BatchNormTest {
         val vb = VarBuilder.fromVarmap(vm, DType.F32, Device.Cpu)
         val bn = batchNorm(1, BatchNormConfig.default(), vb)
         val originalMean = bn.runningMean().detach().affine(1.0, 0.0)
-        val varMapMean = vm.data()["running_mean"]!!
+        val varMapMean = vm.data().getValue("running_mean")
         assertEquals(
             toVec1Round(bn.runningMean(), 4),
             toVec1Round(varMapMean.asTensor(), 4),
