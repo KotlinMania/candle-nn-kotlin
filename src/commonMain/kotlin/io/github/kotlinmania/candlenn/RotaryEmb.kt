@@ -44,7 +44,11 @@ internal class RopeIOp : CustomOp3 {
         if (!l1.isContiguous() || !l2.isContiguous() || !l3.isContiguous()) {
             throw CandleException.RequiresContiguous("rope-i")
         }
-        val (b, h, t, d) = l1.shape().dims4()
+        val dims = l1.shape().dims4()
+        val b = dims.d0
+        val h = dims.d1
+        val t = dims.d2
+        val d = dims.d3
         val elCount = b * h * t * d
         val src = s1.asSlice()
         val cos = s2.asSlice()
@@ -106,7 +110,11 @@ internal class RopeOp : CustomOp3 {
         if (!l1.isContiguous() || !l2.isContiguous() || !l3.isContiguous()) {
             throw CandleException.RequiresContiguous("rope")
         }
-        val (b, h, t, d) = l1.shape().dims4()
+        val dims = l1.shape().dims4()
+        val b = dims.d0
+        val h = dims.d1
+        val t = dims.d2
+        val d = dims.d3
         val elCount = b * h * t * d
         val src = s1.asSlice()
         val cos = s2.asSlice()
@@ -168,7 +176,11 @@ internal class RopeThdOp : CustomOp3 {
         if (!l1.isContiguous() || !l2.isContiguous() || !l3.isContiguous()) {
             throw CandleException.RequiresContiguous("rope-thd")
         }
-        val (b, t, h, d) = l1.shape().dims4()
+        val dims = l1.shape().dims4()
+        val b = dims.d0
+        val t = dims.d1
+        val h = dims.d2
+        val d = dims.d3
         val elCount = b * t * h * d
         val src = s1.asSlice()
         val cos = s2.asSlice()
@@ -239,13 +251,17 @@ private fun checkRopeArguments(
  * Contiguous variant of rope embeddings (interleaved pairs).
  */
 public fun ropeI(xs: Tensor, cos: Tensor, sin: Tensor): Tensor {
-    val (b, _, t, d) = xs.dims4()
-    checkRopeArguments(b, t, d, cos, sin)
+    val dims = xs.dims4()
+    checkRopeArguments(dims.d0, dims.d2, dims.d3, cos, sin)
     return xs.applyOp3NoBwd(cos, sin, RopeIOp())
 }
 
 public fun ropeISlow(x: Tensor, cos: Tensor, sin: Tensor): Tensor {
-    val (bSz, nHead, seqLen, nEmbd) = x.dims4()
+    val dims = x.dims4()
+    val bSz = dims.d0
+    val nHead = dims.d1
+    val seqLen = dims.d2
+    val nEmbd = dims.d3
     val cosReshaped = cos
         .reshape(Shape(seqLen, nEmbd / 2, 1))
         .broadcastLeft(Shape(bSz, nHead))
@@ -264,13 +280,13 @@ public fun ropeISlow(x: Tensor, cos: Tensor, sin: Tensor): Tensor {
  * Split-half variant of rotary position embeddings for `(B, H, T, D)` tensors.
  */
 public fun rope(xs: Tensor, cos: Tensor, sin: Tensor): Tensor {
-    val (b, _, t, d) = xs.dims4()
-    checkRopeArguments(b, t, d, cos, sin)
+    val dims = xs.dims4()
+    checkRopeArguments(dims.d0, dims.d2, dims.d3, cos, sin)
     return xs.applyOp3NoBwd(cos, sin, RopeOp())
 }
 
 public fun ropeSlow(x: Tensor, cos: Tensor, sin: Tensor): Tensor {
-    val (_, _, _, nEmbd) = x.dims4()
+    val nEmbd = x.dims4().d3
     val cosUnsqueezed = cos.unsqueeze(0).unsqueeze(0)
     val sinUnsqueezed = sin.unsqueeze(0).unsqueeze(0)
     val x1 = x.narrow(D.Minus1, 0, nEmbd / 2)
@@ -285,13 +301,13 @@ public fun ropeSlow(x: Tensor, cos: Tensor, sin: Tensor): Tensor {
  * Split-half variant of rotary position embeddings for `(B, T, H, D)` tensors.
  */
 public fun ropeThd(xs: Tensor, cos: Tensor, sin: Tensor): Tensor {
-    val (b, t, _, d) = xs.dims4()
-    checkRopeArguments(b, t, d, cos, sin)
+    val dims = xs.dims4()
+    checkRopeArguments(dims.d0, dims.d1, dims.d3, cos, sin)
     return xs.applyOp3NoBwd(cos, sin, RopeThdOp())
 }
 
 public fun ropeThdSlow(x: Tensor, cos: Tensor, sin: Tensor): Tensor {
-    val (_, _, _, nEmbd) = x.dims4()
+    val nEmbd = x.dims4().d3
     val cosUnsqueezed = cos.unsqueeze(0).unsqueeze(2)
     val sinUnsqueezed = sin.unsqueeze(0).unsqueeze(2)
     val x1 = x.narrow(D.Minus1, 0, nEmbd / 2)

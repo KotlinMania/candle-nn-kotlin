@@ -20,8 +20,8 @@ class CpuFlashAttnTest {
     }
 
     private fun referenceCausalSdpa(q: Tensor, k: Tensor, v: Tensor, scale: Float): Tensor {
-        val (_, _, sQ, _) = q.dims4()
-        val (_, _, sKv, _) = k.dims4()
+        val sQ = q.dims4().d2
+        val sKv = k.dims4().d2
         val offset = sKv - sQ
 
         val maskVals = ArrayList<Float>(sQ * sKv)

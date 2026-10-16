@@ -353,7 +353,11 @@ public fun layerNorm(xs: Tensor, alpha: Tensor, beta: Tensor, eps: Float): Tenso
 
 // https://pytorch.org/docs/stable/generated/torch.nn.PixelShuffle.html
 public fun pixelShuffle(xs: Tensor, upscaleFactor: Int): Tensor {
-    val (bSize, c, h, w) = xs.dims4()
+    val dims = xs.dims4()
+    val bSize = dims.d0
+    val c = dims.d1
+    val h = dims.d2
+    val w = dims.d3
     val outC = c / upscaleFactor / upscaleFactor
     return xs.reshape(Shape(bSize, outC, upscaleFactor, upscaleFactor, h, w))
         .permute(0, 1, 4, 2, 5, 3)
@@ -361,7 +365,11 @@ public fun pixelShuffle(xs: Tensor, upscaleFactor: Int): Tensor {
 }
 
 public fun pixelUnshuffle(xs: Tensor, downscaleFactor: Int): Tensor {
-    val (bSize, c, h, w) = xs.dims4()
+    val dims = xs.dims4()
+    val bSize = dims.d0
+    val c = dims.d1
+    val h = dims.d2
+    val w = dims.d3
     val outC = c * downscaleFactor * downscaleFactor
     return xs.reshape(Shape(bSize, c, h / downscaleFactor, downscaleFactor, w / downscaleFactor, downscaleFactor))
         .permute(0, 1, 3, 5, 2, 4)
@@ -372,7 +380,9 @@ public fun replicationPad2d(xs: Tensor, pad: Int): Tensor {
     when (pad) {
         0 -> return xs
         1 -> {
-            val (_, _, h, w) = xs.dims4()
+            val dims = xs.dims4()
+            val h = dims.d2
+            val w = dims.d3
             val first = xs.narrow(3, 0, 1)
             val last = xs.narrow(3, w - 1, 1)
             val xsPaddedW = Tensor.cat(listOf(first, xs, last), 3)
