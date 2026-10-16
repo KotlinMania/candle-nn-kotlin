@@ -1,0 +1,103 @@
+// port-lint: tests tests/batch_norm.rs
+package io.github.kotlinmania.candlenn
+
+import io.github.kotlinmania.candle.DType
+import io.github.kotlinmania.candle.Device
+import io.github.kotlinmania.candle.Shape
+import io.github.kotlinmania.candle.Tensor
+import io.github.kotlinmania.candle.toVec1Round
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertNotEquals
+
+class BatchNormTest {
+    @Test
+    fun batchNormTest() {
+        val runningMean = Tensor.zeros(Shape(5), DType.F32, Device.Cpu)
+        val runningVar = Tensor.ones(Shape(5), DType.F32, Device.Cpu)
+        val bn = BatchNorm.newNoBias(5, runningMean, runningVar, 1e-8)
+        val inputVals = floatArrayOf(
+            -0.7493f, -1.0410f, 1.6977f, -0.6579f, 1.7982f, -0.0087f, 0.2812f, -0.1190f, 0.2908f, -0.5975f,
+            -0.0278f, -0.2138f, -1.3130f, -1.6048f, -2.2028f, 0.9452f, 0.4002f, 0.0831f, 1.0004f, 0.1860f,
+            0.5004f, 0.5539f, 0.9991f, -0.2540f, -0.0703f, -0.3752f, -0.1096f, -0.2374f, 1.0258f, -2.2208f,
+            -0.0257f, 0.6073f, -1.1627f, -0.0964f, -1.9718f, 1.6577f, 0.1931f, -0.3692f, -0.8011f, 0.9059f,
+            0.4797f, 0.6521f, -0.0165f, -0.6683f, -0.4148f, 2.0649f, -0.8276f, 1.7947f, -0.2061f, 0.5812f,
+            -1.3598f, 1.6192f, 1.0466f, -0.4423f, 0.4202f, 0.1749f, 0.6969f, 0.2616f, -0.0369f, -1.4951f,
+            -0.0814f, -0.1877f, 0.0267f, 0.6150f, 0.2402f, -1.1440f, -2.0068f, 0.6032f, -2.6639f, 0.8260f,
+            0.1085f, -0.1693f, 1.2805f, 0.7654f, -0.4930f, 0.3770f, 1.1309f, 0.2303f, 0.2949f, -0.2634f, -0.5225f,
+            0.4269f, 0.6341f, 1.5736f, 0.9827f, -1.2499f, 0.3509f, -1.6243f, -0.8123f, 0.7634f, -0.3047f, 0.0143f,
+            -0.4032f, 0.0537f, 0.7022f, 0.8405f, -1.2221f, -1.6847f, -0.0714f, -0.1608f, 0.5579f, -1.5858f,
+            0.4617f, -0.6480f, 0.1332f, 0.0419f, -0.9784f, 0.4173f, 1.2313f, -1.9046f, -0.1656f, 0.1259f, 0.0763f,
+            1.4252f, -0.9115f, -0.1093f, -0.3100f, -0.6734f, -1.4357f, 0.9205f,
+        )
+        val input = Tensor.new(inputVals, Shape(2, 5, 3, 4), Device.Cpu)
+        val output = bn.forwardTrain(input)
+        assertEquals(listOf(2, 5, 3, 4), output.dims())
+        val outputFlat = output.flattenAll()
+        assertEquals(
+            listOf(
+                -0.6391f, -0.9414f, 1.8965f, -0.5444f, 2.0007f, 0.1283f, 0.4287f, 0.014f, 0.4387f, -0.4818f,
+                0.1085f, -0.0842f, -1.6809f, -2.0057f, -2.6714f, 0.8328f, 0.2262f, -0.1268f, 0.8943f, -0.0123f,
+                0.3377f, 0.3973f, 0.8928f, -0.5021f, 0.0861f, -0.2324f, 0.0451f, -0.0884f, 1.2311f, -2.1603f,
+                0.1327f, 0.7939f, -1.055f, 0.0589f, -1.9002f, 1.8912f, 0.2918f, -0.3253f, -0.7993f, 1.0741f,
+                0.6063f, 0.7955f, 0.0617f, -0.6536f, -0.3754f, 2.3461f, -0.8284f, 2.0495f, -0.201f, 0.6476f,
+                -1.4446f, 1.7665f, 1.1493f, -0.4556f, 0.4741f, 0.2097f, 0.7723f, 0.3031f, -0.0186f, -1.5905f,
+                0.053f, -0.0572f, 0.165f, 0.7746f, 0.3862f, -1.0481f, -1.9422f, 0.7624f, -2.6231f, 0.9933f,
+                0.2498f, -0.0381f, 1.2061f, 0.6327f, -0.7681f, 0.2004f, 1.0396f, 0.037f, 0.109f, -0.5125f,
+                -0.8009f, 0.2559f, 0.4865f, 1.5324f, 1.1861f, -1.1461f, 0.5261f, -1.5372f, -0.689f, 0.957f,
+                -0.1587f, 0.1745f, -0.2616f, 0.2156f, 0.8931f, 1.0375f, -1.2614f, -1.7691f, 0.0015f, -0.0966f,
+                0.6921f, -1.6605f, 0.5866f, -0.6313f, 0.226f, 0.1258f, -0.9939f, 0.5378f, 1.3484f, -2.0319f,
+                -0.1574f, 0.1568f, 0.1034f, 1.5574f, -0.9614f, -0.0967f, -0.313f, -0.7047f, -1.5264f, 1.0134f,
+            ),
+            toVec1Round(outputFlat, 4),
+        )
+        val bn2 = BatchNorm.new(
+            5,
+            runningMean,
+            runningVar,
+            Tensor.new(floatArrayOf(0.5f), Shape(1), Device.Cpu).broadcastAs(Shape(5)),
+            Tensor.new(floatArrayOf(-1.5f), Shape(1), Device.Cpu).broadcastAs(Shape(5)),
+            1e-8,
+        )
+        val output2 = bn2.forwardTrain(input)
+        assertEquals(listOf(2, 5, 3, 4), output2.dims())
+        val output2Flat = output2.flattenAll()
+        val diff2 = output2Flat.sub(outputFlat.mul(0.5)).add(1.5).sqr()
+        val sumDiff2 = diff2.sumKeepdim(0)
+        assertEquals(listOf(0.0f), toVec1Round(sumDiff2, 4))
+
+        assertEquals(
+            listOf(-0.0133f, 0.0197f, -0.0153f, -0.0073f, -0.0020f),
+            toVec1Round(bn.runningMean(), 4),
+        )
+        assertEquals(
+            listOf(0.9972f, 0.9842f, 0.9956f, 0.9866f, 0.9898f),
+            toVec1Round(bn.runningVar(), 4),
+        )
+    }
+
+    @Test
+    fun trainBatchNorm() {
+        val vm = VarMap.new()
+        val vb = VarBuilder.fromVarmap(vm, DType.F32, Device.Cpu)
+        val bn = batchNorm(1, BatchNormConfig.default(), vb)
+        val originalMean = bn.runningMean().detach().affine(1.0, 0.0)
+        val varMapMean = vm.data()["running_mean"]!!
+        assertEquals(
+            toVec1Round(bn.runningMean(), 4),
+            toVec1Round(varMapMean.asTensor(), 4),
+        )
+        val one = originalMean.onesLike()
+        val meanPlusOne = originalMean.add(one).reshape(1, 1)
+
+        bn.forwardTrain(meanPlusOne)
+        assertNotEquals(
+            toVec1Round(bn.runningMean(), 4),
+            toVec1Round(originalMean, 4),
+        )
+        assertEquals(
+            toVec1Round(bn.runningMean(), 4),
+            toVec1Round(varMapMean.asTensor(), 4),
+        )
+    }
+}
