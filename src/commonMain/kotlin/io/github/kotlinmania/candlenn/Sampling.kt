@@ -21,7 +21,12 @@ public fun gumbelSoftmax(
     } else {
         // Cast to f32, doing the Gumbel softmax in bf16 is a bit unstable.
         val logitsF32 = logits.toDtype(DType.F32)
-        val minusG = logitsF32.randLike(1e-7, 0.999).log().neg().log()
+        val minusG =
+            logitsF32
+                .randLike(1e-7, 0.999)
+                .log()
+                .neg()
+                .log()
         if (temperature == 1.0) {
             (logitsF32 - minusG).argmax(dimIdx)
         } else {

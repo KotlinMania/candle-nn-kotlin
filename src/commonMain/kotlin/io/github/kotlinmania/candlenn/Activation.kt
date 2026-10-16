@@ -43,36 +43,76 @@ public class Activation(
         public val GeluPytorchTanh: Activation = Activation(ActivationKind.GeluPytorchTanh)
 
         public fun Elu(alpha: Double): Activation = Activation(ActivationKind.Elu, alpha)
+
         public fun LeakyRelu(negativeSlope: Double): Activation = Activation(ActivationKind.LeakyRelu, negativeSlope)
+
         public fun default(): Activation = Gelu
     }
 
     override fun forward(xs: Tensor): Tensor =
         when (kind) {
-            ActivationKind.Gelu -> xs.geluErf()
+            ActivationKind.Gelu -> {
+                xs.geluErf()
+            }
+
             // https://github.com/huggingface/transformers/blob/12f043eaeaabfef6f6efea411d98e6f6d3c094b7/src/transformers/activations.py#L49-L78
             // See matching implementation at:
             // https://github.com/ggerganov/llama.cpp/blob/43c9244056fc7c02ab2fe6dcbe2787fd2f2ac3f6/ggml.c#L6098-L6125
-            ActivationKind.NewGelu -> xs.gelu()
-            ActivationKind.Relu -> xs.relu()
-            ActivationKind.Relu2 -> xs.relu().sqr()
-            ActivationKind.Relu6 -> xs.clamp(0.0, 6.0)
-            ActivationKind.Silu -> xs.silu()
-            ActivationKind.Sigmoid -> sigmoid(xs)
-            ActivationKind.HardSigmoid -> hardSigmoid(xs)
-            ActivationKind.Swiglu -> swiglu(xs)
-            ActivationKind.Swish -> xs * sigmoid(xs)
-            ActivationKind.HardSwish -> xs * hardSigmoid(xs)
-            ActivationKind.Elu -> xs.elu(param)
-            ActivationKind.LeakyRelu -> leakyRelu(xs, param)
+            ActivationKind.NewGelu -> {
+                xs.gelu()
+            }
+
+            ActivationKind.Relu -> {
+                xs.relu()
+            }
+
+            ActivationKind.Relu2 -> {
+                xs.relu().sqr()
+            }
+
+            ActivationKind.Relu6 -> {
+                xs.clamp(0.0, 6.0)
+            }
+
+            ActivationKind.Silu -> {
+                xs.silu()
+            }
+
+            ActivationKind.Sigmoid -> {
+                sigmoid(xs)
+            }
+
+            ActivationKind.HardSigmoid -> {
+                hardSigmoid(xs)
+            }
+
+            ActivationKind.Swiglu -> {
+                swiglu(xs)
+            }
+
+            ActivationKind.Swish -> {
+                xs * sigmoid(xs)
+            }
+
+            ActivationKind.HardSwish -> {
+                xs * hardSigmoid(xs)
+            }
+
+            ActivationKind.Elu -> {
+                xs.elu(param)
+            }
+
+            ActivationKind.LeakyRelu -> {
+                leakyRelu(xs, param)
+            }
+
             ActivationKind.GeluPytorchTanh -> {
                 val c = sqrt(2.0 / PI)
                 0.5 * xs * (1.0 + ((xs + 0.044715 * xs.powf(3.0)) * c).tanh())
             }
         }
 
-    override fun equals(other: Any?): Boolean =
-        other is Activation && kind == other.kind && param == other.param
+    override fun equals(other: Any?): Boolean = other is Activation && kind == other.kind && param == other.param
 
     override fun hashCode(): Int = 31 * kind.hashCode() + param.hashCode()
 
@@ -84,8 +124,10 @@ public class PReLU(
     private val isScalar: Boolean,
 ) : Module {
     public companion object {
-        public fun new(weight: Tensor, isScalar: Boolean): PReLU =
-            PReLU(weight, isScalar)
+        public fun new(
+            weight: Tensor,
+            isScalar: Boolean,
+        ): PReLU = PReLU(weight, isScalar)
     }
 
     public fun weight(): Tensor = weight
@@ -93,22 +135,23 @@ public class PReLU(
     public fun isScalar(): Boolean = isScalar
 
     override fun forward(xs: Tensor): Tensor {
-        val weight = if (isScalar) {
-            weight.reshape(Shape(emptyList()))
-        } else if (xs.rank() >= 2) {
-            val numChannels = xs.dim(1)
-            val numWeights = weight.elemCount()
-            if (numWeights != numChannels) {
-                throw io.github.kotlinmania.candle.CandleException.Msg(
-                    "error in prelu: unexpected number of channels for the input, got $numChannels, weight is $numWeights",
-                )
+        val weight =
+            if (isScalar) {
+                weight.reshape(Shape(emptyList()))
+            } else if (xs.rank() >= 2) {
+                val numChannels = xs.dim(1)
+                val numWeights = weight.elemCount()
+                if (numWeights != numChannels) {
+                    throw io.github.kotlinmania.candle.CandleException.Msg(
+                        "error in prelu: unexpected number of channels for the input, got $numChannels, weight is $numWeights",
+                    )
+                }
+                val s = MutableList(xs.rank()) { 1 }
+                s[1] = weight.elemCount()
+                weight.reshape(Shape(s))
+            } else {
+                weight
             }
-            val s = MutableList(xs.rank()) { 1 }
-            s[1] = weight.elemCount()
-            weight.reshape(Shape(s))
-        } else {
-            weight
-        }
         val zeros = xs.zerosLike()
         return xs.maximum(zeros) + xs.minimum(zeros).broadcastMul(weight)
     }
@@ -121,7 +164,10 @@ public class PReLU(
  * necessary. When `numChannels` is `null`, a single scalar value is used and shared across all
  * channels.
  */
-public fun prelu(numChannels: Int?, vs: VarBuilder): PReLU {
+public fun prelu(
+    numChannels: Int?,
+    vs: VarBuilder,
+): PReLU {
     val initWs = Init.Const(0.25)
     // When using a scalar weight, the PyTorch encoding consists in using a 1d tensor of length 1,
     // we mimic this behavior here so so that checkpoints are compatible.

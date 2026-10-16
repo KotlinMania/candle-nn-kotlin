@@ -34,34 +34,39 @@ class VarlenFlashAttentionTest {
         windowRight: Int? = null,
     ): Tensor =
         when (impl) {
-            VarlenImpl.CpuFlash -> flashAttnVarlenCpu(
-                q,
-                k,
-                v,
-                alibiSlopes,
-                seqlensQ,
-                seqlensK,
-                maxQ,
-                maxK,
-                softmaxScale,
-                causal,
-                windowLeft,
-                windowRight,
-            )
-            VarlenImpl.Unfused -> flashAttnVarlenUnfused(
-                q,
-                k,
-                v,
-                alibiSlopes,
-                seqlensQ,
-                seqlensK,
-                maxQ,
-                maxK,
-                softmaxScale,
-                causal,
-                windowLeft,
-                windowRight,
-            )
+            VarlenImpl.CpuFlash -> {
+                flashAttnVarlenCpu(
+                    q,
+                    k,
+                    v,
+                    alibiSlopes,
+                    seqlensQ,
+                    seqlensK,
+                    maxQ,
+                    maxK,
+                    softmaxScale,
+                    causal,
+                    windowLeft,
+                    windowRight,
+                )
+            }
+
+            VarlenImpl.Unfused -> {
+                flashAttnVarlenUnfused(
+                    q,
+                    k,
+                    v,
+                    alibiSlopes,
+                    seqlensQ,
+                    seqlensK,
+                    maxQ,
+                    maxK,
+                    softmaxScale,
+                    causal,
+                    windowLeft,
+                    windowRight,
+                )
+            }
         }
 
     private data class VarlenInputs(
@@ -105,7 +110,12 @@ class VarlenFlashAttentionTest {
         return VarlenInputs(q, k, v, seqlensQ, seqlensK, maxL, maxL)
     }
 
-    private fun assertClose(a: Tensor, b: Tensor, precision: DType, label: String) {
+    private fun assertClose(
+        a: Tensor,
+        b: Tensor,
+        precision: DType,
+        label: String,
+    ) {
         val aVec = a.toDtype(DType.F32).flattenAll().toVec1<Float>()
         val bVec = b.toDtype(DType.F32).flattenAll().toVec1<Float>()
         var maxDiff = 0.0f
@@ -131,32 +141,34 @@ class VarlenFlashAttentionTest {
         val v = inputs.v.toDtype(precision)
         val scale = 1.0f / sqrt(headDim.toFloat())
 
-        val outFused = runVarlen(
-            VarlenImpl.CpuFlash,
-            q,
-            k,
-            v,
-            null,
-            inputs.seqlensQ,
-            inputs.seqlensK,
-            inputs.maxQ,
-            inputs.maxK,
-            scale,
-            causal,
-        )
-        val outUnfused = runVarlen(
-            VarlenImpl.Unfused,
-            q,
-            k,
-            v,
-            null,
-            inputs.seqlensQ,
-            inputs.seqlensK,
-            inputs.maxQ,
-            inputs.maxK,
-            scale,
-            causal,
-        )
+        val outFused =
+            runVarlen(
+                VarlenImpl.CpuFlash,
+                q,
+                k,
+                v,
+                null,
+                inputs.seqlensQ,
+                inputs.seqlensK,
+                inputs.maxQ,
+                inputs.maxK,
+                scale,
+                causal,
+            )
+        val outUnfused =
+            runVarlen(
+                VarlenImpl.Unfused,
+                q,
+                k,
+                v,
+                null,
+                inputs.seqlensQ,
+                inputs.seqlensK,
+                inputs.maxQ,
+                inputs.maxK,
+                scale,
+                causal,
+            )
         assertClose(outFused, outUnfused, precision, "varlen causal=$causal precision=$precision")
     }
 

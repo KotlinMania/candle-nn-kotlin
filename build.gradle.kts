@@ -85,8 +85,10 @@ val benchmarkTargetNames = csvProperty("project.benchmark.targets")
 // Transliterated from libc-kotlin's build.gradle.kts; generalized so tasks,
 // file paths, and npm package names all derive from project.ffi.name.
 // ============================================================================
-fun boolProperty(name: String, default: Boolean = false): Boolean =
-    providers.gradleProperty(name).map { it.trim().lowercase() == "true" }.getOrElse(default)
+fun boolProperty(
+    name: String,
+    default: Boolean = false,
+): Boolean = providers.gradleProperty(name).map { it.trim().lowercase() == "true" }.getOrElse(default)
 
 val nativeFfiEnabled = boolProperty("project.ffi.native")
 val jvmFfiEnabled = boolProperty("project.ffi.jvm")
@@ -534,7 +536,11 @@ kotlin {
     // and fails loudly if neither is available.
     // ========================================================================
     if (nativeFfiEnabled) {
-        fun ensureKonanDependency(name: String, konanDeps: File, execOps: ExecOperations) {
+        fun ensureKonanDependency(
+            name: String,
+            konanDeps: File,
+            execOps: ExecOperations,
+        ) {
             val targetDir = File(konanDeps, name)
             if (targetDir.exists()) return
             konanDeps.mkdirs()
@@ -617,7 +623,22 @@ kotlin {
                                     }
                                 execOps
                                     .exec {
-                                        commandLine("xcrun", "-sdk", sdkName, "clang", "-target", appleTriple, "-Wall", "-Wextra", "-Werror", "-c", "-I${cSource.parent}", cSource.absolutePath, "-o", tempObj.absolutePath)
+                                        commandLine(
+                                            "xcrun",
+                                            "-sdk",
+                                            sdkName,
+                                            "clang",
+                                            "-target",
+                                            appleTriple,
+                                            "-Wall",
+                                            "-Wextra",
+                                            "-Werror",
+                                            "-c",
+                                            "-I${cSource.parent}",
+                                            cSource.absolutePath,
+                                            "-o",
+                                            tempObj.absolutePath,
+                                        )
                                     }.assertNormalExitValue()
                                 execOps
                                     .exec {
@@ -646,7 +667,18 @@ kotlin {
                                 if (clangBin.exists() && sysroot.exists()) {
                                     execOps
                                         .exec {
-                                            commandLine(clangBin.absolutePath, "--sysroot=${sysroot.absolutePath}", "-Wall", "-Wextra", "-Werror", "-c", "-I${cSource.parent}", cSource.absolutePath, "-o", tempObj.absolutePath)
+                                            commandLine(
+                                                clangBin.absolutePath,
+                                                "--sysroot=${sysroot.absolutePath}",
+                                                "-Wall",
+                                                "-Wextra",
+                                                "-Werror",
+                                                "-c",
+                                                "-I${cSource.parent}",
+                                                cSource.absolutePath,
+                                                "-o",
+                                                tempObj.absolutePath,
+                                            )
                                         }.assertNormalExitValue()
                                     execOps
                                         .exec {
@@ -673,7 +705,17 @@ kotlin {
                                 if (isLinux) {
                                     execOps
                                         .exec {
-                                            commandLine("clang", "-Wall", "-Wextra", "-Werror", "-c", "-I${cSource.parent}", cSource.absolutePath, "-o", tempObj.absolutePath)
+                                            commandLine(
+                                                "clang",
+                                                "-Wall",
+                                                "-Wextra",
+                                                "-Werror",
+                                                "-c",
+                                                "-I${cSource.parent}",
+                                                cSource.absolutePath,
+                                                "-o",
+                                                tempObj.absolutePath,
+                                            )
                                         }.assertNormalExitValue()
                                     execOps
                                         .exec {
@@ -687,7 +729,19 @@ kotlin {
                                     if (sysroot.exists() && llvmAr.exists()) {
                                         execOps
                                             .exec {
-                                                commandLine("clang", "--target=$targetTriple", "--sysroot=${sysroot.absolutePath}", "-Wall", "-Wextra", "-Werror", "-c", "-I${cSource.parent}", cSource.absolutePath, "-o", tempObj.absolutePath)
+                                                commandLine(
+                                                    "clang",
+                                                    "--target=$targetTriple",
+                                                    "--sysroot=${sysroot.absolutePath}",
+                                                    "-Wall",
+                                                    "-Wextra",
+                                                    "-Werror",
+                                                    "-c",
+                                                    "-I${cSource.parent}",
+                                                    cSource.absolutePath,
+                                                    "-o",
+                                                    tempObj.absolutePath,
+                                                )
                                             }.assertNormalExitValue()
                                         execOps
                                             .exec {
@@ -710,11 +764,28 @@ kotlin {
                                 if (isWindows && mingwSysroot.exists()) {
                                     execOps
                                         .exec {
-                                            commandLine("clang", "--target=x86_64-w64-mingw32", "--sysroot=${mingwSysroot.absolutePath}", "-Wall", "-Wextra", "-Werror", "-c", "-I${cSource.parent}", cSource.absolutePath, "-o", tempObj.absolutePath)
+                                            commandLine(
+                                                "clang",
+                                                "--target=x86_64-w64-mingw32",
+                                                "--sysroot=${mingwSysroot.absolutePath}",
+                                                "-Wall",
+                                                "-Wextra",
+                                                "-Werror",
+                                                "-c",
+                                                "-I${cSource.parent}",
+                                                cSource.absolutePath,
+                                                "-o",
+                                                tempObj.absolutePath,
+                                            )
                                         }.assertNormalExitValue()
                                     execOps
                                         .exec {
-                                            commandLine(if (arExe.exists()) arExe.absolutePath else "ar", "rcs", outFile.absolutePath, tempObj.absolutePath)
+                                            commandLine(
+                                                if (arExe.exists()) arExe.absolutePath else "ar",
+                                                "rcs",
+                                                outFile.absolutePath,
+                                                tempObj.absolutePath,
+                                            )
                                         }.assertNormalExitValue()
                                 } else if (isMac) {
                                     ensureKonanDependency("target-toolchain-2-osx-android_ndk", konanDeps, execOps)
@@ -722,7 +793,19 @@ kotlin {
                                     if (mingwSysroot.exists() && llvmAr.exists()) {
                                         execOps
                                             .exec {
-                                                commandLine("clang", "--target=x86_64-w64-mingw32", "--sysroot=${mingwSysroot.absolutePath}", "-Wall", "-Wextra", "-Werror", "-c", "-I${cSource.parent}", cSource.absolutePath, "-o", tempObj.absolutePath)
+                                                commandLine(
+                                                    "clang",
+                                                    "--target=x86_64-w64-mingw32",
+                                                    "--sysroot=${mingwSysroot.absolutePath}",
+                                                    "-Wall",
+                                                    "-Wextra",
+                                                    "-Werror",
+                                                    "-c",
+                                                    "-I${cSource.parent}",
+                                                    cSource.absolutePath,
+                                                    "-o",
+                                                    tempObj.absolutePath,
+                                                )
                                             }.assertNormalExitValue()
                                         execOps
                                             .exec {
@@ -745,7 +828,9 @@ kotlin {
                         }
                         tempObj.delete()
                         if (!outFile.exists() || outFile.length() == 0L) {
-                            throw GradleException("compile${ffiName}Wrapper failed: output library does not exist for $konanTargetName at ${outFile.absolutePath}")
+                            throw GradleException(
+                                "compile${ffiName}Wrapper failed: output library does not exist for $konanTargetName at ${outFile.absolutePath}",
+                            )
                         }
                     }
                 }
@@ -1474,7 +1559,9 @@ tasks.matching { it.name.contains("GenerateSPMPackage") }.configureEach {
                 val text = file.readText()
                 val cleaned =
                     text.replace(
-                        Regex("""@_spi\([^)]+\)\s+public func (?:decodeSequentially|shouldEncodeElementDefault|encodeNotNullMark)\([^)]*\)(?:\s*->\s*[^\n{]+)?\s*\{\s*fatalError\([^)]+\)\s*\}"""),
+                        Regex(
+                            """@_spi\([^)]+\)\s+public func (?:decodeSequentially|shouldEncodeElementDefault|encodeNotNullMark)\([^)]*\)(?:\s*->\s*[^\n{]+)?\s*\{\s*fatalError\([^)]+\)\s*\}""",
+                        ),
                         "",
                     )
                 if (cleaned != text) {

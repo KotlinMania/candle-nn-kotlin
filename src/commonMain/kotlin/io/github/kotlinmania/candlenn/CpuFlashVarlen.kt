@@ -95,15 +95,16 @@ public fun flashAttnVarlenCpu(
         bail("totalQ/totalK mismatch with seqlens")
     }
 
-    val slopes: List<Float>? = if (alibiSlopes != null) {
-        val s = alibiSlopes.toVec1<Float>()
-        if (s.size != hq) {
-            bail("alibiSlopes len ${s.size} != Hq $hq")
+    val slopes: List<Float>? =
+        if (alibiSlopes != null) {
+            val s = alibiSlopes.toVec1<Float>()
+            if (s.size != hq) {
+                bail("alibiSlopes len ${s.size} != Hq $hq")
+            }
+            s
+        } else {
+            null
         }
-        s
-    } else {
-        null
-    }
 
     val qCont = q.contiguous()
     val kCont = k.contiguous()
@@ -121,20 +122,23 @@ public fun flashAttnVarlenCpu(
     }
 
     val (qG, qL) = qCont.storageAndLayout()
-    val qData = when (qG) {
-        is Storage.Cpu -> qG.storage.toFloatArraySlice(qL.startOffset())
-        else -> bail("q not cpu")
-    }
+    val qData =
+        when (qG) {
+            is Storage.Cpu -> qG.storage.toFloatArraySlice(qL.startOffset())
+            else -> bail("q not cpu")
+        }
     val (kG, kL) = kCont.storageAndLayout()
-    val kData = when (kG) {
-        is Storage.Cpu -> kG.storage.toFloatArraySlice(kL.startOffset())
-        else -> bail("k not cpu")
-    }
+    val kData =
+        when (kG) {
+            is Storage.Cpu -> kG.storage.toFloatArraySlice(kL.startOffset())
+            else -> bail("k not cpu")
+        }
     val (vG, vL) = vCont.storageAndLayout()
-    val vData = when (vG) {
-        is Storage.Cpu -> vG.storage.toFloatArraySlice(vL.startOffset())
-        else -> bail("v not cpu")
-    }
+    val vData =
+        when (vG) {
+            is Storage.Cpu -> vG.storage.toFloatArraySlice(vL.startOffset())
+            else -> bail("v not cpu")
+        }
 
     val out = FloatArray(totalQ * hq * d)
     val acc = FloatArray(d)
@@ -208,12 +212,18 @@ public fun flashAttnVarlenCpu(
     return if (dt == DType.F16) result.toDtype(DType.F16) else result
 }
 
-private fun alibiBias(slope: Float, iK: Int, j: Int, causal: Boolean): Float {
-    val dist = if (causal) {
-        max(iK - j, 0).toFloat()
-    } else {
-        abs(j - iK).toFloat()
-    }
+private fun alibiBias(
+    slope: Float,
+    iK: Int,
+    j: Int,
+    causal: Boolean,
+): Float {
+    val dist =
+        if (causal) {
+            max(iK - j, 0).toFloat()
+        } else {
+            abs(j - iK).toFloat()
+        }
     return -slope * dist
 }
 

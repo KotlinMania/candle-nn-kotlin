@@ -341,8 +341,7 @@ internal class VarMapBackend(
         name: String,
         dtype: DType,
         dev: Device,
-    ): Tensor =
-        throw CandleException.Msg("`getUnchecked` does not make sense for `VarMap`, use `get`.")
+    ): Tensor = throw CandleException.Msg("`getUnchecked` does not make sense for `VarMap`, use `get`.")
 
     override fun containsTensor(name: String): Boolean = varMap.data().containsKey(name)
 }
@@ -484,8 +483,7 @@ internal class PthBackend(
         return raw.toDevice(dev).toDtype(dtype)
     }
 
-    override fun containsTensor(name: String): Boolean =
-        pth.get(name).unwrapOrElse { null } != null
+    override fun containsTensor(name: String): Boolean = pth.get(name).unwrapOrElse { null } != null
 }
 
 internal class MmapedSafetensorsBackend(

@@ -25,13 +25,17 @@ internal data class TileConfig(
     val groupM: Int,
 )
 
-internal fun defaultConfig(numTokens: Int, numExperts: Int): TileConfig {
-    val bm = when {
-        numTokens <= 32 -> 16
-        numTokens <= 96 -> 32
-        numTokens <= 512 -> 64
-        else -> 128
-    }
+internal fun defaultConfig(
+    numTokens: Int,
+    numExperts: Int,
+): TileConfig {
+    val bm =
+        when {
+            numTokens <= 32 -> 16
+            numTokens <= 96 -> 32
+            numTokens <= 512 -> 64
+            else -> 128
+        }
     return TileConfig(
         bm = bm,
         bn = if (numTokens <= 64) 64 else 128,
@@ -55,7 +59,10 @@ public class MoeRouting private constructor(
     public fun numExperts(): Int = numExpertsVal
 
     public companion object {
-        public fun new(topkIds: Tensor, numExperts: Int): MoeRouting {
+        public fun new(
+            topkIds: Tensor,
+            numExperts: Int,
+        ): MoeRouting {
             val (numTokens, topK) = topkIds.dims2()
             if (numTokens == 0 || topK == 0) {
                 bail("cuTile MoE routing requires at least one route")
@@ -78,7 +85,9 @@ public fun routedGroupedMatmul(
     inputMode: MoeInputMode,
     routeWeights: Tensor? = null,
 ): Tensor {
-    if (input.rank() == 0 || expertWeights.rank() == 0 || routing.numExperts() <= 0 || inputMode.name.isEmpty() || routeWeights?.rank() == 0) {
+    if (input.rank() == 0 || expertWeights.rank() == 0 || routing.numExperts() <= 0 || inputMode.name.isEmpty() ||
+        routeWeights?.rank() == 0
+    ) {
         bail("invalid routedGroupedMatmul arguments")
     }
     bail("cuTile routed grouped matmul requires CUDA backend")
@@ -91,7 +100,9 @@ public fun warmupRoutedGroupedMatmul(
     inputMode: MoeInputMode,
     routeWeights: Tensor? = null,
 ) {
-    if (input.rank() == 0 || expertWeights.rank() == 0 || routing.numExperts() <= 0 || inputMode.name.isEmpty() || routeWeights?.rank() == 0) {
+    if (input.rank() == 0 || expertWeights.rank() == 0 || routing.numExperts() <= 0 || inputMode.name.isEmpty() ||
+        routeWeights?.rank() == 0
+    ) {
         bail("invalid warmupRoutedGroupedMatmul arguments")
     }
     bail("cuTile routed grouped matmul requires CUDA backend")

@@ -29,16 +29,21 @@ class OptimTest {
         val wGen = Tensor.new(floatArrayOf(3.0f, 1.0f), Shape(1, 2), Device.Cpu)
         val bGen = Tensor.new(floatArrayOf(-2.0f), Shape.SCALAR, Device.Cpu)
         val gen = Linear.new(wGen, bGen)
-        val sampleXs = Tensor.new(
-            floatArrayOf(
-                2.0f, 1.0f,
-                7.0f, 4.0f,
-                -4.0f, 12.0f,
-                5.0f, 8.0f,
-            ),
-            Shape(4, 2),
-            Device.Cpu,
-        )
+        val sampleXs =
+            Tensor.new(
+                floatArrayOf(
+                    2.0f,
+                    1.0f,
+                    7.0f,
+                    4.0f,
+                    -4.0f,
+                    12.0f,
+                    5.0f,
+                    8.0f,
+                ),
+                Shape(4, 2),
+                Device.Cpu,
+            )
         val sampleYs = gen.forward(sampleXs)
 
         val w = Var.fromTensor(Tensor.new(floatArrayOf(0.0f, 0.0f), Shape(1, 2), Device.Cpu))
@@ -59,16 +64,21 @@ class OptimTest {
         val wGen = Tensor.new(floatArrayOf(3.0f, 1.0f), Shape(1, 2), Device.Cpu)
         val bGen = Tensor.new(floatArrayOf(-2.0f), Shape.SCALAR, Device.Cpu)
         val gen = Linear.new(wGen, bGen)
-        val sampleXs = Tensor.new(
-            floatArrayOf(
-                2.0f, 1.0f,
-                7.0f, 4.0f,
-                -4.0f, 12.0f,
-                5.0f, 8.0f,
-            ),
-            Shape(4, 2),
-            Device.Cpu,
-        )
+        val sampleXs =
+            Tensor.new(
+                floatArrayOf(
+                    2.0f,
+                    1.0f,
+                    7.0f,
+                    4.0f,
+                    -4.0f,
+                    12.0f,
+                    5.0f,
+                    8.0f,
+                ),
+                Shape(4, 2),
+                Device.Cpu,
+            )
         val sampleYs = gen.forward(sampleXs)
 
         val w = Var.fromTensor(Tensor.new(floatArrayOf(0.0f, 0.0f), Shape(1, 2), Device.Cpu))
@@ -90,16 +100,21 @@ class OptimTest {
         val wGen = Tensor.new(floatArrayOf(3.0f, 1.0f), Shape(1, 2), Device.Cpu)
         val bGen = Tensor.new(floatArrayOf(-2.0f), Shape.SCALAR, Device.Cpu)
         val gen = Linear.new(wGen, bGen)
-        val sampleXs = Tensor.new(
-            floatArrayOf(
-                2.0f, 1.0f,
-                7.0f, 4.0f,
-                -4.0f, 12.0f,
-                5.0f, 8.0f,
-            ),
-            Shape(4, 2),
-            Device.Cpu,
-        )
+        val sampleXs =
+            Tensor.new(
+                floatArrayOf(
+                    2.0f,
+                    1.0f,
+                    7.0f,
+                    4.0f,
+                    -4.0f,
+                    12.0f,
+                    5.0f,
+                    8.0f,
+                ),
+                Shape(4, 2),
+                Device.Cpu,
+            )
         val sampleYs = gen.forward(sampleXs)
 
         val varMap = VarMap.new()

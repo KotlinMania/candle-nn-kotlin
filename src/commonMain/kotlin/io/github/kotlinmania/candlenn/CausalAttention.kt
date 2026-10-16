@@ -14,19 +14,34 @@ import kotlin.math.min
 import kotlin.math.pow
 import kotlin.math.tanh
 
-private fun vecFmaddScalar(acc: FloatArray, accOffset: Int, v: FloatArray, vOffset: Int, len: Int, w: Float) {
+private fun vecFmaddScalar(
+    acc: FloatArray,
+    accOffset: Int,
+    v: FloatArray,
+    vOffset: Int,
+    len: Int,
+    w: Float,
+) {
     for (i in 0 until len) {
         acc[accOffset + i] += v[vOffset + i] * w
     }
 }
 
-private fun vecScale(acc: FloatArray, s: Float) {
+private fun vecScale(
+    acc: FloatArray,
+    s: Float,
+) {
     for (i in acc.indices) {
         acc[i] *= s
     }
 }
 
-private fun vecAdd(acc: FloatArray, v: FloatArray, vOffset: Int, len: Int) {
+private fun vecAdd(
+    acc: FloatArray,
+    v: FloatArray,
+    vOffset: Int,
+    len: Int,
+) {
     for (i in 0 until len) {
         acc[i] += v[vOffset + i]
     }
@@ -48,7 +63,7 @@ public fun runCausalAttnCpu(
     if (b != 1) {
         bail(
             "causal runCausalAttnCpu is B=1 only (got B=$b). " +
-                "Multi-batch should be routed through the varlen path."
+                "Multi-batch should be routed through the varlen path.",
         )
     }
 
@@ -64,86 +79,91 @@ public fun runCausalAttnCpu(
     val softcapVal = softcap ?: 0.0f
 
     val (qG, qL) = qSq.storageAndLayout()
-    val qData = when (qG) {
-        is Storage.Cpu -> qG.storage.toFloatArraySlice(qL.startOffset())
-        else -> bail("Expected CPU storage")
-    }
+    val qData =
+        when (qG) {
+            is Storage.Cpu -> qG.storage.toFloatArraySlice(qL.startOffset())
+            else -> bail("Expected CPU storage")
+        }
     val (kG, kL) = kSq.storageAndLayout()
-    val kData = when (kG) {
-        is Storage.Cpu -> kG.storage.toFloatArraySlice(kL.startOffset())
-        else -> bail("Expected CPU storage")
-    }
+    val kData =
+        when (kG) {
+            is Storage.Cpu -> kG.storage.toFloatArraySlice(kL.startOffset())
+            else -> bail("Expected CPU storage")
+        }
     val (vG, vL) = vSq.storageAndLayout()
-    val vData = when (vG) {
-        is Storage.Cpu -> vG.storage.toFloatArraySlice(vL.startOffset())
-        else -> bail("Expected CPU storage")
-    }
+    val vData =
+        when (vG) {
+            is Storage.Cpu -> vG.storage.toFloatArraySlice(vL.startOffset())
+            else -> bail("Expected CPU storage")
+        }
 
     return if (qSq.dtype() == DType.F32) {
-        val result = if (sQ == 1) {
-            causalDecodeF32(
-                qData,
-                kData,
-                vData,
-                hQ,
-                hKv,
-                hV,
-                d,
-                sKv,
-                softmaxScale,
-                maxBiasVal,
-                softcapVal,
-            )
-        } else {
-            causalPrefillF32(
-                qData,
-                kData,
-                vData,
-                sQ,
-                hQ,
-                hKv,
-                hV,
-                d,
-                sKv,
-                softmaxScale,
-                kvOffset,
-                maxBiasVal,
-                softcapVal,
-            )
-        }
+        val result =
+            if (sQ == 1) {
+                causalDecodeF32(
+                    qData,
+                    kData,
+                    vData,
+                    hQ,
+                    hKv,
+                    hV,
+                    d,
+                    sKv,
+                    softmaxScale,
+                    maxBiasVal,
+                    softcapVal,
+                )
+            } else {
+                causalPrefillF32(
+                    qData,
+                    kData,
+                    vData,
+                    sQ,
+                    hQ,
+                    hKv,
+                    hV,
+                    d,
+                    sKv,
+                    softmaxScale,
+                    kvOffset,
+                    maxBiasVal,
+                    softcapVal,
+                )
+            }
         result.unsqueeze(0)
     } else {
-        val result = if (sQ == 1) {
-            causalDecodeGeneric(
-                qData,
-                kData,
-                vData,
-                hQ,
-                hKv,
-                hV,
-                d,
-                sKv,
-                softmaxScale,
-                maxBiasVal,
-                softcapVal,
-            )
-        } else {
-            causalPrefillGeneric(
-                qData,
-                kData,
-                vData,
-                sQ,
-                hQ,
-                hKv,
-                hV,
-                d,
-                sKv,
-                softmaxScale,
-                kvOffset,
-                maxBiasVal,
-                softcapVal,
-            )
-        }
+        val result =
+            if (sQ == 1) {
+                causalDecodeGeneric(
+                    qData,
+                    kData,
+                    vData,
+                    hQ,
+                    hKv,
+                    hV,
+                    d,
+                    sKv,
+                    softmaxScale,
+                    maxBiasVal,
+                    softcapVal,
+                )
+            } else {
+                causalPrefillGeneric(
+                    qData,
+                    kData,
+                    vData,
+                    sQ,
+                    hQ,
+                    hKv,
+                    hV,
+                    d,
+                    sKv,
+                    softmaxScale,
+                    kvOffset,
+                    maxBiasVal,
+                    softcapVal,
+                )
+            }
         result.unsqueeze(0)
     }
 }
@@ -427,11 +447,12 @@ private fun causalPrefillF32(
         val hI = rowIdx / sQ
         val qPos = rowIdx % sQ
 
-        val slope = if (maxBias > 0.0f) {
-            2.0f.pow(-maxBias * (hI + 1).toFloat() / n2.toFloat())
-        } else {
-            0.0f
-        }
+        val slope =
+            if (maxBias > 0.0f) {
+                2.0f.pow(-maxBias * (hI + 1).toFloat() / n2.toFloat())
+            } else {
+                0.0f
+            }
 
         val kHeadOff = (hI / rk) * d
         val vHeadOff = (hI / rv) * d
@@ -444,11 +465,12 @@ private fun causalPrefillF32(
         val kvEnd = min(qPos + kvOffset + 1, kvLen)
 
         for (kvPos in 0 until kvEnd) {
-            val alibiBias = if (maxBias > 0.0f) {
-                slope * (kvPos.toLong() - (qPos + kvOffset).toLong()).toFloat()
-            } else {
-                0.0f
-            }
+            val alibiBias =
+                if (maxBias > 0.0f) {
+                    slope * (kvPos.toLong() - (qPos + kvOffset).toLong()).toFloat()
+                } else {
+                    0.0f
+                }
 
             val kBase = kvPos * kSeqStride + kHeadOff
             var score = dotF32(qData, qBase, kData, kBase, d) * scalePre
@@ -541,9 +563,7 @@ private fun causalDecodeGeneric(
     scale: Float,
     maxBias: Float,
     logitSoftcap: Float,
-): Tensor {
-    return causalDecodeF32(qData, kData, vData, hQ, hKv, hV, d, kvLen, scale, maxBias, logitSoftcap)
-}
+): Tensor = causalDecodeF32(qData, kData, vData, hQ, hKv, hV, d, kvLen, scale, maxBias, logitSoftcap)
 
 private fun causalPrefillGeneric(
     qData: FloatArray,
@@ -559,6 +579,4 @@ private fun causalPrefillGeneric(
     kvOffset: Int,
     maxBias: Float,
     logitSoftcap: Float,
-): Tensor {
-    return causalPrefillF32(qData, kData, vData, sQ, hQ, hKv, hV, d, kvLen, scale, kvOffset, maxBias, logitSoftcap)
-}
+): Tensor = causalPrefillF32(qData, kData, vData, sQ, hQ, hKv, hV, d, kvLen, scale, kvOffset, maxBias, logitSoftcap)

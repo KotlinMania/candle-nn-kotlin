@@ -33,16 +33,20 @@ public class SGD internal constructor(
     private var learningRate: Double,
 ) : Optimizer {
     public companion object {
-        public fun new(vars: List<Var>, learningRate: Double): SGD {
+        public fun new(
+            vars: List<Var>,
+            learningRate: Double,
+        ): SGD {
             val filtered = vars.filter { it.asTensor().dtype().isFloat() }.toMutableList()
             return SGD(filtered, learningRate)
         }
 
-        public fun empty(learningRate: Double): SGD =
-            new(emptyList(), learningRate)
+        public fun empty(learningRate: Double): SGD = new(emptyList(), learningRate)
 
-        public fun fromSlice(vars: List<Var>, learningRate: Double): SGD =
-            new(vars.toList(), learningRate)
+        public fun fromSlice(
+            vars: List<Var>,
+            learningRate: Double,
+        ): SGD = new(vars.toList(), learningRate)
     }
 
     override fun learningRate(): Double = learningRate
@@ -91,21 +95,25 @@ public class AdamW internal constructor(
     private var params: ParamsAdamW,
 ) : Optimizer {
     public companion object {
-        public fun new(vars: List<Var>, params: ParamsAdamW): AdamW {
-            val adamVars = vars
-                .filter { it.asTensor().dtype().isFloat() }
-                .map { v ->
-                    val dtype = v.asTensor().dtype()
-                    val shape = v.asTensor().shape()
-                    val device = v.asTensor().device()
-                    val firstMoment = Var.zeros(shape, dtype, device)
-                    val secondMoment = Var.zeros(shape, dtype, device)
-                    VarAdamW(
-                        variable = v,
-                        firstMoment = firstMoment,
-                        secondMoment = secondMoment,
-                    )
-                }
+        public fun new(
+            vars: List<Var>,
+            params: ParamsAdamW,
+        ): AdamW {
+            val adamVars =
+                vars
+                    .filter { it.asTensor().dtype().isFloat() }
+                    .map { v ->
+                        val dtype = v.asTensor().dtype()
+                        val shape = v.asTensor().shape()
+                        val device = v.asTensor().device()
+                        val firstMoment = Var.zeros(shape, dtype, device)
+                        val secondMoment = Var.zeros(shape, dtype, device)
+                        VarAdamW(
+                            variable = v,
+                            firstMoment = firstMoment,
+                            secondMoment = secondMoment,
+                        )
+                    }
             return AdamW(
                 vars = adamVars,
                 stepT = 0,
@@ -113,16 +121,20 @@ public class AdamW internal constructor(
             )
         }
 
-        public fun newLr(vars: List<Var>, learningRate: Double): AdamW {
+        public fun newLr(
+            vars: List<Var>,
+            learningRate: Double,
+        ): AdamW {
             val params = ParamsAdamW(lr = learningRate)
             return new(vars, params)
         }
 
-        public fun empty(params: ParamsAdamW): AdamW =
-            new(emptyList(), params)
+        public fun empty(params: ParamsAdamW): AdamW = new(emptyList(), params)
 
-        public fun fromSlice(vars: List<Var>, params: ParamsAdamW): AdamW =
-            new(vars.toList(), params)
+        public fun fromSlice(
+            vars: List<Var>,
+            params: ParamsAdamW,
+        ): AdamW = new(vars.toList(), params)
     }
 
     override fun learningRate(): Double = params.lr

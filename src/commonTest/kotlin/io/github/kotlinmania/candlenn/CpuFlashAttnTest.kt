@@ -13,13 +13,23 @@ import kotlin.test.Test
 import kotlin.test.assertTrue
 
 class CpuFlashAttnTest {
-    private fun referenceSdpa(q: Tensor, k: Tensor, v: Tensor, scale: Float): Tensor {
+    private fun referenceSdpa(
+        q: Tensor,
+        k: Tensor,
+        v: Tensor,
+        scale: Float,
+    ): Tensor {
         val att = q.mul(scale.toDouble()).matmul(k.t())
         val probs = softmaxLastDim(att.toDtype(DType.F32)).toDtype(q.dtype())
         return probs.matmul(v)
     }
 
-    private fun referenceCausalSdpa(q: Tensor, k: Tensor, v: Tensor, scale: Float): Tensor {
+    private fun referenceCausalSdpa(
+        q: Tensor,
+        k: Tensor,
+        v: Tensor,
+        scale: Float,
+    ): Tensor {
         val sQ = q.dims4().d2
         val sKv = k.dims4().d2
         val offset = sKv - sQ
@@ -41,7 +51,12 @@ class CpuFlashAttnTest {
         return probs.matmul(v)
     }
 
-    private fun assertClose(a: Tensor, b: Tensor, tol: Float, label: String) {
+    private fun assertClose(
+        a: Tensor,
+        b: Tensor,
+        tol: Float,
+        label: String,
+    ) {
         val aFlat = a.toDtype(DType.F32).flattenAll().toVec1<Float>()
         val bFlat = b.toDtype(DType.F32).flattenAll().toVec1<Float>()
         var maxDiff = 0.0f
@@ -64,15 +79,16 @@ class CpuFlashAttnTest {
         val v = Tensor.randn(0.0f, 1.0f, Shape(1, h, kvLen, d), dev)
 
         val expected = referenceSdpa(q, k, v, scale)
-        val out = flashAttn(
-            q.transpose(1, 2),
-            k.transpose(1, 2),
-            v.transpose(1, 2),
-            scale,
-            AttnMask.causalWithOffset(kvLen - 1),
-            null,
-            null,
-        )
+        val out =
+            flashAttn(
+                q.transpose(1, 2),
+                k.transpose(1, 2),
+                v.transpose(1, 2),
+                scale,
+                AttnMask.causalWithOffset(kvLen - 1),
+                null,
+                null,
+            )
         assertClose(out, expected, 1e-5f, "causal_decode_b1")
     }
 
@@ -89,15 +105,16 @@ class CpuFlashAttnTest {
         val v = Tensor.randn(0.0f, 1.0f, Shape(1, h, s, d), dev)
 
         val expected = referenceCausalSdpa(q, k, v, scale)
-        val out = flashAttn(
-            q.transpose(1, 2),
-            k.transpose(1, 2),
-            v.transpose(1, 2),
-            scale,
-            AttnMask.causal(),
-            null,
-            null,
-        )
+        val out =
+            flashAttn(
+                q.transpose(1, 2),
+                k.transpose(1, 2),
+                v.transpose(1, 2),
+                scale,
+                AttnMask.causal(),
+                null,
+                null,
+            )
         assertClose(out, expected, 1e-5f, "causal_prefill_b1")
     }
 
@@ -116,15 +133,16 @@ class CpuFlashAttnTest {
         val v = Tensor.randn(0.0f, 1.0f, Shape(1, h, sKv, d), dev)
 
         val expected = referenceCausalSdpa(q, k, v, scale)
-        val out = flashAttn(
-            q.transpose(1, 2),
-            k.transpose(1, 2),
-            v.transpose(1, 2),
-            scale,
-            AttnMask.causalWithOffset(offset),
-            null,
-            null,
-        )
+        val out =
+            flashAttn(
+                q.transpose(1, 2),
+                k.transpose(1, 2),
+                v.transpose(1, 2),
+                scale,
+                AttnMask.causalWithOffset(offset),
+                null,
+                null,
+            )
         assertClose(out, expected, 1e-5f, "causal_prefill_with_offset")
     }
 
@@ -142,25 +160,28 @@ class CpuFlashAttnTest {
         val v = Tensor.randn(0.0f, 1.0f, Shape(1, hKv, kvLen, d), dev)
 
         val reps = hQ / hKv
-        val kExp = k
-            .reshape(Shape(1, hKv, 1, kvLen, d))
-            .broadcastAs(Shape(1, hKv, reps, kvLen, d))
-            .reshape(Shape(1, hQ, kvLen, d))
-        val vExp = v
-            .reshape(Shape(1, hKv, 1, kvLen, d))
-            .broadcastAs(Shape(1, hKv, reps, kvLen, d))
-            .reshape(Shape(1, hQ, kvLen, d))
+        val kExp =
+            k
+                .reshape(Shape(1, hKv, 1, kvLen, d))
+                .broadcastAs(Shape(1, hKv, reps, kvLen, d))
+                .reshape(Shape(1, hQ, kvLen, d))
+        val vExp =
+            v
+                .reshape(Shape(1, hKv, 1, kvLen, d))
+                .broadcastAs(Shape(1, hKv, reps, kvLen, d))
+                .reshape(Shape(1, hQ, kvLen, d))
 
         val expected = referenceSdpa(q, kExp, vExp, scale)
-        val out = flashAttn(
-            q.transpose(1, 2),
-            k.transpose(1, 2),
-            v.transpose(1, 2),
-            scale,
-            AttnMask.causalWithOffset(kvLen - 1),
-            null,
-            null,
-        )
+        val out =
+            flashAttn(
+                q.transpose(1, 2),
+                k.transpose(1, 2),
+                v.transpose(1, 2),
+                scale,
+                AttnMask.causalWithOffset(kvLen - 1),
+                null,
+                null,
+            )
         assertClose(out, expected, 1e-5f, "causal_decode_gqa")
     }
 
@@ -177,15 +198,16 @@ class CpuFlashAttnTest {
         val v = Tensor.randn(0.0f, 1.0f, Shape(1, h, s, d), dev)
 
         val expected = referenceSdpa(q, k, v, scale)
-        val out = flashAttn(
-            q.transpose(1, 2),
-            k.transpose(1, 2),
-            v.transpose(1, 2),
-            scale,
-            AttnMask.None,
-            null,
-            null,
-        )
+        val out =
+            flashAttn(
+                q.transpose(1, 2),
+                k.transpose(1, 2),
+                v.transpose(1, 2),
+                scale,
+                AttnMask.None,
+                null,
+                null,
+            )
         assertClose(out, expected, 1e-5f, "standard_no_mask_b1")
     }
 
@@ -213,15 +235,16 @@ class CpuFlashAttnTest {
         val probs = softmaxLastDim(att)
         val expected = probs.matmul(v)
 
-        val out = flashAttn(
-            q.transpose(1, 2),
-            k.transpose(1, 2),
-            v.transpose(1, 2),
-            scale,
-            AttnMask.Mask(maskTensor),
-            null,
-            null,
-        )
+        val out =
+            flashAttn(
+                q.transpose(1, 2),
+                k.transpose(1, 2),
+                v.transpose(1, 2),
+                scale,
+                AttnMask.Mask(maskTensor),
+                null,
+                null,
+            )
         assertClose(out, expected, 1e-4f, "standard_with_mask_b1")
     }
 
@@ -239,14 +262,16 @@ class CpuFlashAttnTest {
         val v = Tensor.randn(0.0f, 1.0f, Shape(1, hKv, kvLen, d), dev)
 
         val reps = hQ / hKv
-        val kExp = k
-            .reshape(Shape(1, hKv, 1, kvLen, d))
-            .broadcastAs(Shape(1, hKv, reps, kvLen, d))
-            .reshape(Shape(1, hQ, kvLen, d))
-        val vExp = v
-            .reshape(Shape(1, hKv, 1, kvLen, d))
-            .broadcastAs(Shape(1, hKv, reps, kvLen, d))
-            .reshape(Shape(1, hQ, kvLen, d))
+        val kExp =
+            k
+                .reshape(Shape(1, hKv, 1, kvLen, d))
+                .broadcastAs(Shape(1, hKv, reps, kvLen, d))
+                .reshape(Shape(1, hQ, kvLen, d))
+        val vExp =
+            v
+                .reshape(Shape(1, hKv, 1, kvLen, d))
+                .broadcastAs(Shape(1, hKv, reps, kvLen, d))
+                .reshape(Shape(1, hQ, kvLen, d))
         val expected = referenceSdpa(q, kExp, vExp, scale)
 
         val kSeq = k.squeeze(0).transpose(0, 1).contiguous()
@@ -254,7 +279,14 @@ class CpuFlashAttnTest {
         val kv = Tensor.cat(listOf(kSeq, vSeq), 2).contiguous()
 
         val kvData = kv.flattenAll().toVec1<Float>().toFloatArray()
-        val qFlat = q.squeeze(0).squeeze(1).contiguous().flattenAll().toVec1<Float>().toFloatArray()
+        val qFlat =
+            q
+                .squeeze(0)
+                .squeeze(1)
+                .contiguous()
+                .flattenAll()
+                .toVec1<Float>()
+                .toFloatArray()
 
         val out = causalDecodeF32Interleaved(qFlat, kvData, hQ, hKv, d, kvLen, scale).unsqueeze(0)
         assertClose(out, expected, 1e-5f, "interleaved_kv_decode")

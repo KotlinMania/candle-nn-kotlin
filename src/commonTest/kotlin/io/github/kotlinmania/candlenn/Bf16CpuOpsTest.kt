@@ -11,8 +11,16 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 class Bf16CpuOpsTest {
-    private fun rel(a: Tensor, b: Tensor): Float {
-        val d = a.sub(b.toDtype(DType.F32)).abs().maxAll().toScalar<Float>()
+    private fun rel(
+        a: Tensor,
+        b: Tensor,
+    ): Float {
+        val d =
+            a
+                .sub(b.toDtype(DType.F32))
+                .abs()
+                .maxAll()
+                .toScalar<Float>()
         val s = max(a.abs().maxAll().toScalar<Float>(), 1.0f)
         return d / s
     }
@@ -23,13 +31,14 @@ class Bf16CpuOpsTest {
         val x32 = Tensor.rand(-2.0f, 2.0f, Shape(2, 4, 64), dev)
         val xb = x32.toDtype(DType.BF16)
 
-        val checks = mutableListOf(
-            "silu" to rel(silu(x32), silu(xb)),
-            "softmax" to rel(softmaxLastDim(x32), softmaxLastDim(xb)),
-            "mul" to rel(x32.mul(x32), xb.mul(xb)),
-            "add" to rel(x32.add(x32), xb.add(xb)),
-            "exp" to rel(x32.exp(), xb.exp()),
-        )
+        val checks =
+            mutableListOf(
+                "silu" to rel(silu(x32), silu(xb)),
+                "softmax" to rel(softmaxLastDim(x32), softmaxLastDim(xb)),
+                "mul" to rel(x32.mul(x32), xb.mul(xb)),
+                "add" to rel(x32.add(x32), xb.add(xb)),
+                "exp" to rel(x32.exp(), xb.exp()),
+            )
         val w32 = Tensor.rand(0.5f, 1.5f, Shape(64), dev)
         val rms32 = rmsNorm(x32, w32, 1e-6f)
         val rmsb = rmsNorm(xb, w32.toDtype(DType.BF16), 1e-6f)
@@ -47,7 +56,12 @@ class Bf16CpuOpsTest {
         val b = Tensor.rand(-1.0f, 1.0f, Shape(2, 32, 17), dev)
         val want = a.matmul(b)
         val got = a.toDtype(DType.BF16).matmul(b.toDtype(DType.BF16)).toDtype(DType.F32)
-        val d = want.sub(got).abs().maxAll().toScalar<Float>()
+        val d =
+            want
+                .sub(got)
+                .abs()
+                .maxAll()
+                .toScalar<Float>()
         assertTrue(d < 0.15f, "bf16 matmul diff $d")
     }
 
@@ -86,7 +100,12 @@ class Bf16CpuOpsTest {
 
         val sdpaOutput = sdpa(q, k, v, scale, 1.0f)
         assertEquals(groundTruth.shape(), sdpaOutput.shape())
-        val err = groundTruth.sub(sdpaOutput).abs().sumAll().toScalar<Float>()
+        val err =
+            groundTruth
+                .sub(sdpaOutput)
+                .abs()
+                .sumAll()
+                .toScalar<Float>()
         assertTrue(err <= 1e-4f, "sdpa error $err")
     }
 }

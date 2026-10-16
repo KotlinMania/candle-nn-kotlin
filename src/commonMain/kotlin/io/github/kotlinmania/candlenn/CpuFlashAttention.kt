@@ -17,10 +17,11 @@ public fun runFlashAttnCpu(
     maxBias: Float? = null,
     softcap: Float? = null,
 ): Tensor {
-    val attnMask = if (mask != null) {
-        AttnMask.Mask(mask)
-    } else {
-        AttnMask.None
-    }
+    val attnMask =
+        if (mask != null) {
+            AttnMask.Mask(mask)
+        } else {
+            AttnMask.None
+        }
     return flashAttn(q, k, v, softmaxScale, attnMask, maxBias, softcap)
 }

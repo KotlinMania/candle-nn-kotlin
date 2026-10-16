@@ -67,13 +67,15 @@ public class GroupNorm(
         val hiddenSize = xShape.subList(2, xShape.size).fold(1) { a, b -> a * b } * (nChannels / numGroups)
 
         val xDtype = xs.dtype()
-        val internalDtype = when (xDtype) {
-            DType.F16, DType.BF16 -> DType.F32
-            else -> xDtype
-        }
-        val xsReshaped = xs
-            .reshape(Shape(bSz, numGroups, hiddenSize))
-            .toDtype(internalDtype)
+        val internalDtype =
+            when (xDtype) {
+                DType.F16, DType.BF16 -> DType.F32
+                else -> xDtype
+            }
+        val xsReshaped =
+            xs
+                .reshape(Shape(bSz, numGroups, hiddenSize))
+                .toDtype(internalDtype)
         val meanX = (xsReshaped.sumKeepdim(2) / hiddenSize.toDouble())
         val xsCentered = xsReshaped.broadcastSub(meanX)
         val normX = (xsCentered.sqr().sumKeepdim(2) / hiddenSize.toDouble())

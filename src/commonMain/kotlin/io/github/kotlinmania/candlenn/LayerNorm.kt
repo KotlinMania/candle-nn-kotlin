@@ -18,11 +18,12 @@ public data class LayerNormConfig(
     public companion object {
         public fun default(): LayerNormConfig = LayerNormConfig()
 
-        public fun fromEps(eps: Double): LayerNormConfig = LayerNormConfig(
-            eps = eps,
-            removeMean = true,
-            affine = true,
-        )
+        public fun fromEps(eps: Double): LayerNormConfig =
+            LayerNormConfig(
+                eps = eps,
+                removeMean = true,
+                affine = true,
+            )
     }
 }
 
@@ -41,14 +42,21 @@ public class LayerNorm(
     private val epsVal: Double,
 ) : Module {
     public companion object {
-        public fun new(weight: Tensor, bias: Tensor, eps: Double): LayerNorm =
-            LayerNorm(weight, bias, removeMeanVal = true, epsVal = eps)
+        public fun new(
+            weight: Tensor,
+            bias: Tensor,
+            eps: Double,
+        ): LayerNorm = LayerNorm(weight, bias, removeMeanVal = true, epsVal = eps)
 
-        public fun newNoBias(weight: Tensor, eps: Double): LayerNorm =
-            LayerNorm(weight, null, removeMeanVal = true, epsVal = eps)
+        public fun newNoBias(
+            weight: Tensor,
+            eps: Double,
+        ): LayerNorm = LayerNorm(weight, null, removeMeanVal = true, epsVal = eps)
 
-        public fun rmsNorm(weight: Tensor, eps: Double): LayerNorm =
-            LayerNorm(weight, null, removeMeanVal = false, epsVal = eps)
+        public fun rmsNorm(
+            weight: Tensor,
+            eps: Double,
+        ): LayerNorm = LayerNorm(weight, null, removeMeanVal = false, epsVal = eps)
     }
 
     public fun weight(): Tensor = weightVal
@@ -68,18 +76,20 @@ public class LayerNorm(
             }
         }
         val xDtype = xs.dtype()
-        val internalDtype = when (xDtype) {
-            DType.F16, DType.BF16 -> DType.F32
-            else -> xDtype
-        }
+        val internalDtype =
+            when (xDtype) {
+                DType.F16, DType.BF16 -> DType.F32
+                else -> xDtype
+            }
         val hiddenSize = xs.dim(D.Minus1)
         val x = xs.toDtype(internalDtype)
-        val xSubMean = if (removeMeanVal) {
-            val meanX = (x.sumKeepdim(D.Minus1) / hiddenSize.toDouble())
-            x.broadcastSub(meanX)
-        } else {
-            x
-        }
+        val xSubMean =
+            if (removeMeanVal) {
+                val meanX = (x.sumKeepdim(D.Minus1) / hiddenSize.toDouble())
+                x.broadcastSub(meanX)
+            } else {
+                x
+            }
         val normX = (xSubMean.sqr().sumKeepdim(D.Minus1) / hiddenSize.toDouble())
         val xNormed = xSubMean.broadcastDiv((normX + epsVal).sqrt())
         val xWeighted = xNormed.toDtype(xDtype).broadcastMul(weightVal)
@@ -90,15 +100,20 @@ public class LayerNorm(
     }
 }
 
-public fun layerNorm(size: Int, config: LayerNormConfig, vb: VarBuilder): LayerNorm {
+public fun layerNorm(
+    size: Int,
+    config: LayerNormConfig,
+    vb: VarBuilder,
+): LayerNorm {
     val weightName = listOf("weight", "gamma").firstOrNull { vb.containsTensor(it) } ?: "weight"
     val weight = vb.getWithHints(size, weightName, Init.Const(1.0))
-    val bias = if (config.affine) {
-        val biasName = listOf("bias", "beta").firstOrNull { vb.containsTensor(it) } ?: "bias"
-        vb.getWithHints(size, biasName, Init.Const(0.0))
-    } else {
-        null
-    }
+    val bias =
+        if (config.affine) {
+            val biasName = listOf("bias", "beta").firstOrNull { vb.containsTensor(it) } ?: "bias"
+            vb.getWithHints(size, biasName, Init.Const(0.0))
+        } else {
+            null
+        }
     return LayerNorm(
         weightVal = weight,
         biasVal = bias,
@@ -107,15 +122,23 @@ public fun layerNorm(size: Int, config: LayerNormConfig, vb: VarBuilder): LayerN
     )
 }
 
-public fun layerNorm(size: Int, eps: Double, vb: VarBuilder): LayerNorm =
-    layerNorm(size, LayerNormConfig.fromEps(eps), vb)
+public fun layerNorm(
+    size: Int,
+    eps: Double,
+    vb: VarBuilder,
+): LayerNorm = layerNorm(size, LayerNormConfig.fromEps(eps), vb)
 
-public fun layerNormNoBias(size: Int, eps: Double, vb: VarBuilder): LayerNorm {
-    val config = LayerNormConfig(
-        eps = eps,
-        removeMean = true,
-        affine = false,
-    )
+public fun layerNormNoBias(
+    size: Int,
+    eps: Double,
+    vb: VarBuilder,
+): LayerNorm {
+    val config =
+        LayerNormConfig(
+            eps = eps,
+            removeMean = true,
+            affine = false,
+        )
     return layerNorm(size, config, vb)
 }
 
@@ -131,8 +154,10 @@ public class RmsNorm(
     private val inner: LayerNorm,
 ) : Module {
     public companion object {
-        public fun new(weight: Tensor, eps: Double): RmsNorm =
-            RmsNorm(LayerNorm.rmsNorm(weight, eps))
+        public fun new(
+            weight: Tensor,
+            eps: Double,
+        ): RmsNorm = RmsNorm(LayerNorm.rmsNorm(weight, eps))
     }
 
     public fun intoInner(): LayerNorm = inner
@@ -151,11 +176,16 @@ public class RmsNorm(
         }
 }
 
-public fun rmsNorm(size: Int, eps: Double, vb: VarBuilder): RmsNorm {
-    val config = LayerNormConfig(
-        eps = eps,
-        removeMean = false,
-        affine = false,
-    )
+public fun rmsNorm(
+    size: Int,
+    eps: Double,
+    vb: VarBuilder,
+): RmsNorm {
+    val config =
+        LayerNormConfig(
+            eps = eps,
+            removeMean = false,
+            affine = false,
+        )
     return RmsNorm(layerNorm(size, config, vb))
 }

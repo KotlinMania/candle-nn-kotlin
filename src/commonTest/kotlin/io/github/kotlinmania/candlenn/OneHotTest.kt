@@ -15,10 +15,11 @@ class OneHotTest {
         val depth = 4
         val oh = oneHot(indices, depth, 1.0f, 0.0f)
 
-        val expectedMatrix = listOf(
-            listOf(listOf(1.0f, 0.0f, 0.0f, 0.0f), listOf(0.0f, 0.0f, 1.0f, 0.0f)),
-            listOf(listOf(0.0f, 1.0f, 0.0f, 0.0f), listOf(0.0f, 0.0f, 0.0f, 0.0f)),
-        )
+        val expectedMatrix =
+            listOf(
+                listOf(listOf(1.0f, 0.0f, 0.0f, 0.0f), listOf(0.0f, 0.0f, 1.0f, 0.0f)),
+                listOf(listOf(0.0f, 1.0f, 0.0f, 0.0f), listOf(0.0f, 0.0f, 0.0f, 0.0f)),
+            )
         assertEquals(Shape(2, 2, depth), oh.shape())
         assertEquals(expectedMatrix, oh.toVec3<Float>())
     }
@@ -26,24 +27,54 @@ class OneHotTest {
     @Test
     fun testRank3OneHot() {
         val device = Device.Cpu
-        val indices = Tensor.new(
-            longArrayOf(0L, 1L, 2L, 3L, 3L, 1L, 1L, -1L),
-            Shape(2, 2, 2),
-            device,
-        )
+        val indices =
+            Tensor.new(
+                longArrayOf(0L, 1L, 2L, 3L, 3L, 1L, 1L, -1L),
+                Shape(2, 2, 2),
+                device,
+            )
         val depth = 4
         val oh = oneHot(indices, depth, 1.0f, 0.0f)
 
-        val expectedMatrix = Tensor.fromVec(
-            listOf(
-                1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f,
-                0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f,
-                0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f, 0.0f,
-                0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,
-            ),
-            Shape(2, 2, 2, 4),
-            device,
-        )
+        val expectedMatrix =
+            Tensor.fromVec(
+                listOf(
+                    1.0f,
+                    0.0f,
+                    0.0f,
+                    0.0f,
+                    0.0f,
+                    1.0f,
+                    0.0f,
+                    0.0f,
+                    0.0f,
+                    0.0f,
+                    1.0f,
+                    0.0f,
+                    0.0f,
+                    0.0f,
+                    0.0f,
+                    1.0f,
+                    0.0f,
+                    0.0f,
+                    0.0f,
+                    1.0f,
+                    0.0f,
+                    1.0f,
+                    0.0f,
+                    0.0f,
+                    0.0f,
+                    1.0f,
+                    0.0f,
+                    0.0f,
+                    0.0f,
+                    0.0f,
+                    0.0f,
+                    0.0f,
+                ),
+                Shape(2, 2, 2, 4),
+                device,
+            )
 
         assertEquals(expectedMatrix.shape(), oh.shape())
         assertEquals(expectedMatrix.dims(), oh.dims())
@@ -57,10 +88,11 @@ class OneHotTest {
         val indices = Tensor.new(longArrayOf(0L, 2L, 1L, -1L), Shape(2, 2), device)
         val oneCold = oneHot(indices, depth, 0u.toUByte(), 1u.toUByte())
 
-        val expectedMatrix = listOf(
-            listOf(listOf<UByte>(0u, 1u, 1u, 1u), listOf<UByte>(1u, 1u, 0u, 1u)),
-            listOf(listOf<UByte>(1u, 0u, 1u, 1u), listOf<UByte>(1u, 1u, 1u, 1u)),
-        )
+        val expectedMatrix =
+            listOf(
+                listOf(listOf<UByte>(0u, 1u, 1u, 1u), listOf<UByte>(1u, 1u, 0u, 1u)),
+                listOf(listOf<UByte>(1u, 0u, 1u, 1u), listOf<UByte>(1u, 1u, 1u, 1u)),
+            )
         assertEquals(Shape(2, 2, depth), oneCold.shape())
         assertEquals(expectedMatrix, oneCold.toVec3<UByte>())
     }

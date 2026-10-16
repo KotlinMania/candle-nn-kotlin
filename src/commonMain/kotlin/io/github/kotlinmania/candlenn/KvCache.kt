@@ -15,7 +15,10 @@ public class Cache(
     private var maxSeqLen: Int,
 ) {
     public companion object {
-        public fun new(dim: Int, maxSeqLen: Int): Cache =
+        public fun new(
+            dim: Int,
+            maxSeqLen: Int,
+        ): Cache =
             Cache(
                 allData = null,
                 dim = dim,
@@ -32,8 +35,7 @@ public class Cache(
 
     public fun allData(): Tensor? = allData
 
-    public fun currentData(): Tensor? =
-        allData?.narrow(dim, 0, currentSeqLen)
+    public fun currentData(): Tensor? = allData?.narrow(dim, 0, currentSeqLen)
 
     public fun reset() {
         currentSeqLen = 0
@@ -71,7 +73,10 @@ public class KvCache(
     private val v: Cache,
 ) {
     public companion object {
-        public fun new(dim: Int, maxSeqLen: Int): KvCache {
+        public fun new(
+            dim: Int,
+            maxSeqLen: Int,
+        ): KvCache {
             val k = Cache.new(dim, maxSeqLen)
             val v = Cache.new(dim, maxSeqLen)
             return KvCache(k, v)
@@ -90,7 +95,10 @@ public class KvCache(
 
     public fun v(): Tensor? = v.currentData()
 
-    public fun append(kTensor: Tensor, vTensor: Tensor): Pair<Tensor, Tensor> {
+    public fun append(
+        kTensor: Tensor,
+        vTensor: Tensor,
+    ): Pair<Tensor, Tensor> {
         val kContig = kTensor.contiguous()
         val vContig = vTensor.contiguous()
         k.append(kContig)
@@ -120,7 +128,10 @@ public class RotatingCache(
     private val maxSeqLen: Int,
 ) {
     public companion object {
-        public fun new(dim: Int, maxSeqLen: Int): RotatingCache =
+        public fun new(
+            dim: Int,
+            maxSeqLen: Int,
+        ): RotatingCache =
             RotatingCache(
                 allData = null,
                 dim = dim,
@@ -167,9 +178,10 @@ public class RotatingCache(
 
         currentSeqLen += seqLen
         if (seqLen >= maxSeqLen) {
-            val toCopy = src
-                .narrow(dim, seqLen - maxSeqLen, maxSeqLen)
-                .contiguous()
+            val toCopy =
+                src
+                    .narrow(dim, seqLen - maxSeqLen, maxSeqLen)
+                    .contiguous()
             ad.sliceSet(toCopy, dim, 0)
             offset = 0
             // Here we return `src` rather than `ad` so that all the past can be used in this
@@ -203,49 +215,54 @@ public class RotatingCache(
      * context so the mask has shape `(seqLen, currentSeqLen)` if `currentSeqLen < maxSeqLen`
      * or `(seqLen, maxSeqLen)` otherwise.
      */
-    public fun attnMask(seqLen: Int, device: Device): Tensor? {
+    public fun attnMask(
+        seqLen: Int,
+        device: Device,
+    ): Tensor? {
         if (seqLen == 1) {
             return null
         }
-        val mask = if (seqLen < maxSeqLen) {
-            val totalSize = if (currentSeqLen + seqLen > maxSeqLen) {
-                // In that case, the mask does not have column Length `maxSeqLen`, rather it has
-                // two disconnected parts.
-                maxSeqLen
+        val mask =
+            if (seqLen < maxSeqLen) {
+                val totalSize =
+                    if (currentSeqLen + seqLen > maxSeqLen) {
+                        // In that case, the mask does not have column Length `maxSeqLen`, rather it has
+                        // two disconnected parts.
+                        maxSeqLen
+                    } else {
+                        currentSeqLen + seqLen
+                    }
+                val maskRows = ArrayList<UByteArray>(seqLen)
+                val absOffset = (offset + seqLen) % maxSeqLen
+                for (i in 0 until seqLen) {
+                    val maskRow = UByteArray(totalSize)
+                    for (j in 0 until totalSize) {
+                        // Find what time step column j corresponds to relative to the end of the step.
+                        // In the circular buffer, `absOffset` is where the *next* write will happen
+                        // after this step completes.
+                        val dist = (absOffset + maxSeqLen - 1 - j) % maxSeqLen
+                        val isFuture = dist < (seqLen - 1 - i)
+                        val isUnwritten = currentSeqLen + seqLen < maxSeqLen && j >= currentSeqLen + seqLen
+                        maskRow[j] = if (isFuture || isUnwritten) 1u else 0u
+                    }
+                    maskRows.add(maskRow)
+                }
+                val flat = UByteArray(seqLen * totalSize)
+                for (i in 0 until seqLen) {
+                    maskRows[i].copyInto(flat, i * totalSize)
+                }
+                Tensor.new(flat, Shape(seqLen, totalSize), device)
             } else {
-                currentSeqLen + seqLen
-            }
-            val maskRows = ArrayList<UByteArray>(seqLen)
-            val absOffset = (offset + seqLen) % maxSeqLen
-            for (i in 0 until seqLen) {
-                val maskRow = UByteArray(totalSize)
-                for (j in 0 until totalSize) {
-                    // Find what time step column j corresponds to relative to the end of the step.
-                    // In the circular buffer, `absOffset` is where the *next* write will happen
-                    // after this step completes.
-                    val dist = (absOffset + maxSeqLen - 1 - j) % maxSeqLen
-                    val isFuture = dist < (seqLen - 1 - i)
-                    val isUnwritten = currentSeqLen + seqLen < maxSeqLen && j >= currentSeqLen + seqLen
-                    maskRow[j] = if (isFuture || isUnwritten) 1u else 0u
+                // In that case we return `src` directly in `append` so the mask is a standard
+                // lower-triangular mask of size `(seqLen, seqLen)`.
+                val flat = UByteArray(seqLen * seqLen)
+                for (i in 0 until seqLen) {
+                    for (j in 0 until seqLen) {
+                        flat[i * seqLen + j] = if (j > i || i - j >= maxSeqLen) 1u else 0u
+                    }
                 }
-                maskRows.add(maskRow)
+                Tensor.new(flat, Shape(seqLen, seqLen), device)
             }
-            val flat = UByteArray(seqLen * totalSize)
-            for (i in 0 until seqLen) {
-                maskRows[i].copyInto(flat, i * totalSize)
-            }
-            Tensor.new(flat, Shape(seqLen, totalSize), device)
-        } else {
-            // In that case we return `src` directly in `append` so the mask is a standard
-            // lower-triangular mask of size `(seqLen, seqLen)`.
-            val flat = UByteArray(seqLen * seqLen)
-            for (i in 0 until seqLen) {
-                for (j in 0 until seqLen) {
-                    flat[i * seqLen + j] = if (j > i || i - j >= maxSeqLen) 1u else 0u
-                }
-            }
-            Tensor.new(flat, Shape(seqLen, seqLen), device)
-        }
         return mask
     }
 
@@ -269,7 +286,10 @@ public class RotatingKvCache(
     private val v: RotatingCache,
 ) {
     public companion object {
-        public fun new(dim: Int, maxSeqLen: Int): RotatingKvCache {
+        public fun new(
+            dim: Int,
+            maxSeqLen: Int,
+        ): RotatingKvCache {
             val k = RotatingCache.new(dim, maxSeqLen)
             val v = RotatingCache.new(dim, maxSeqLen)
             return RotatingKvCache(k, v)
@@ -288,7 +308,10 @@ public class RotatingKvCache(
 
     public fun v(): Tensor? = v.currentData()
 
-    public fun append(kTensor: Tensor, vTensor: Tensor): Pair<Tensor, Tensor> {
+    public fun append(
+        kTensor: Tensor,
+        vTensor: Tensor,
+    ): Pair<Tensor, Tensor> {
         val outK = k.append(kTensor)
         val outV = v.append(vTensor)
         return Pair(outK, outV)
@@ -300,11 +323,12 @@ public class RotatingKvCache(
 
     public fun maxSeqLen(): Int = k.maxSeqLen()
 
-    public fun attnMask(seqLen: Int, device: Device): Tensor? =
-        k.attnMask(seqLen, device)
+    public fun attnMask(
+        seqLen: Int,
+        device: Device,
+    ): Tensor? = k.attnMask(seqLen, device)
 
-    public fun positions(seqLen: Int): List<Int> =
-        k.positions(seqLen)
+    public fun positions(seqLen: Int): List<Int> = k.positions(seqLen)
 
     public fun reset() {
         k.reset()
@@ -354,7 +378,12 @@ public class ScatteredCacheBuilder internal constructor(
     private val device: Device,
 ) {
     public companion object {
-        public fun new(batchSize: Int, context: Int, dtype: DType, device: Device): ScatteredCacheBuilder =
+        public fun new(
+            batchSize: Int,
+            context: Int,
+            dtype: DType,
+            device: Device,
+        ): ScatteredCacheBuilder =
             ScatteredCacheBuilder(
                 context = context,
                 positions = MutableList(batchSize) { 0 },
@@ -364,7 +393,10 @@ public class ScatteredCacheBuilder internal constructor(
             )
     }
 
-    public fun makeCache(numHeads: Int, headDim: Int): ScatteredKvCache {
+    public fun makeCache(
+        numHeads: Int,
+        headDim: Int,
+    ): ScatteredKvCache {
         val batchSize = batchSize()
         val shape = Shape(batchSize, numHeads, context, headDim)
         val k = Tensor.zeros(shape, dtype, device)
@@ -417,11 +449,12 @@ public class ScatteredCacheBuilder internal constructor(
             } else {
                 val offset = startPos - startIndex
                 for (i in 0 until context) {
-                    allPos[i] = if (i < startIndex) {
-                        i + offset
-                    } else {
-                        i + offset - context
-                    }
+                    allPos[i] =
+                        if (i < startIndex) {
+                            i + offset
+                        } else {
+                            i + offset - context
+                        }
                 }
             }
             for (seqI in 0 until seqLen) {
@@ -436,9 +469,10 @@ public class ScatteredCacheBuilder internal constructor(
             }
             for (seqI in 0 until seqLen) {
                 val myPos = seqI + startPos
-                val myMask = allPos.map { pos ->
-                    if (pos <= myPos) 0.0f else Float.NEGATIVE_INFINITY
-                }
+                val myMask =
+                    allPos.map { pos ->
+                        if (pos <= myPos) 0.0f else Float.NEGATIVE_INFINITY
+                    }
                 masks.add(myMask)
             }
 
@@ -453,8 +487,10 @@ public class ScatteredCacheBuilder internal constructor(
                 flatMask[offset++] = v
             }
         }
-        val mask = Tensor.new(flatMask, Shape(batchSize(), 1, seqLen, context), device)
-            .toDtype(dtype)
+        val mask =
+            Tensor
+                .new(flatMask, Shape(batchSize(), 1, seqLen, context), device)
+                .toDtype(dtype)
         val flatIndices = UIntArray(batchSize() * seqLen)
         var idxOffset = 0
         for (row in cacheIndices) {
@@ -503,16 +539,20 @@ public class ScatteredCacheBuilder internal constructor(
         return IndicesAndMask(indicesTensor, maskTensor)
     }
 
-    private fun getMaskAbs(size1: Int, size2: Int): Tensor {
+    private fun getMaskAbs(
+        size1: Int,
+        size2: Int,
+    ): Tensor {
         val context = this.context
         val mask = FloatArray(size1 * size2)
         for (i in 0 until size1) {
             for (j in 0 until size2) {
-                mask[i * size2 + j] = if (size1 + j > size2 + i || size1 + j + context < size2 + i) {
-                    Float.NEGATIVE_INFINITY
-                } else {
-                    0.0f
-                }
+                mask[i * size2 + j] =
+                    if (size1 + j > size2 + i || size1 + j + context < size2 + i) {
+                        Float.NEGATIVE_INFINITY
+                    } else {
+                        0.0f
+                    }
             }
         }
         return Tensor.fromSlice(mask, Shape(size1, size2), device).toDtype(dtype)
@@ -528,8 +568,7 @@ public class ConcatKvCache(
         /**
          * Create a new `ConcatKvCache` that will concatenate along the given `dim`.
          */
-        public fun new(dim: Int): ConcatKvCache =
-            ConcatKvCache(dim, null, null)
+        public fun new(dim: Int): ConcatKvCache = ConcatKvCache(dim, null, null)
     }
 
     public fun dim(): Int = dim
@@ -550,23 +589,27 @@ public class ConcatKvCache(
         return if (curK != null && curV != null) Pair(curK, curV) else null
     }
 
-    public fun currentSeqLen(): Int =
-        k?.dims()?.getOrNull(dim) ?: 0
+    public fun currentSeqLen(): Int = k?.dims()?.getOrNull(dim) ?: 0
 
     /**
      * Append a key and value tensor to the cache, returning the updated key and value tensors.
      */
-    public fun append(kTensor: Tensor, vTensor: Tensor): Pair<Tensor, Tensor> {
+    public fun append(
+        kTensor: Tensor,
+        vTensor: Tensor,
+    ): Pair<Tensor, Tensor> {
         val kDetached = kTensor.contiguous().detach()
         val vDetached = vTensor.contiguous().detach()
-        val nextK = when (val prevK = k) {
-            null -> kDetached
-            else -> Tensor.cat(listOf(prevK, kDetached), dim).detach()
-        }
-        val nextV = when (val prevV = v) {
-            null -> vDetached
-            else -> Tensor.cat(listOf(prevV, vDetached), dim).detach()
-        }
+        val nextK =
+            when (val prevK = k) {
+                null -> kDetached
+                else -> Tensor.cat(listOf(prevK, kDetached), dim).detach()
+            }
+        val nextV =
+            when (val prevV = v) {
+                null -> vDetached
+                else -> Tensor.cat(listOf(prevV, vDetached), dim).detach()
+            }
         k = nextK
         v = nextV
         return Pair(nextK, nextV)
@@ -583,23 +626,35 @@ public class InterleavedKvCache(
     private val headDim: Int,
 ) {
     public companion object {
-        public fun new(headDim: Int): InterleavedKvCache =
-            InterleavedKvCache(null, headDim)
+        public fun new(headDim: Int): InterleavedKvCache = InterleavedKvCache(null, headDim)
     }
 
-    public fun currentSeqLen(): Int =
-        kv?.dims()?.firstOrNull() ?: 0
+    public fun currentSeqLen(): Int = kv?.dims()?.firstOrNull() ?: 0
 
     public fun isEmpty(): Boolean = kv == null
 
-    public fun append(k: Tensor, v: Tensor): Tensor {
-        val kSeq = k.squeeze(0).transpose(0, 1).contiguous().detach()
-        val vSeq = v.squeeze(0).transpose(0, 1).contiguous().detach()
+    public fun append(
+        k: Tensor,
+        v: Tensor,
+    ): Tensor {
+        val kSeq =
+            k
+                .squeeze(0)
+                .transpose(0, 1)
+                .contiguous()
+                .detach()
+        val vSeq =
+            v
+                .squeeze(0)
+                .transpose(0, 1)
+                .contiguous()
+                .detach()
         val kvNew = Tensor.cat(listOf(kSeq, vSeq), 2).detach()
-        val nextKv = when (val prevKv = kv) {
-            null -> kvNew
-            else -> Tensor.cat(listOf(prevKv, kvNew), 0).detach()
-        }
+        val nextKv =
+            when (val prevKv = kv) {
+                null -> kvNew
+                else -> Tensor.cat(listOf(prevKv, kvNew), 0).detach()
+            }
         kv = nextKv
         return nextKv
     }
@@ -621,7 +676,11 @@ public class RawInterleavedKvCache(
     private var len: Int,
 ) {
     public companion object {
-        public fun new(hKv: Int, d: Int, maxSeq: Int): RawInterleavedKvCache {
+        public fun new(
+            hKv: Int,
+            d: Int,
+            maxSeq: Int,
+        ): RawInterleavedKvCache {
             val posStride = hKv * 2 * d
             return RawInterleavedKvCache(
                 buf = FloatArray(maxSeq * posStride),
@@ -637,7 +696,10 @@ public class RawInterleavedKvCache(
 
     public fun isEmpty(): Boolean = len == 0
 
-    public fun writeKv(kFlat: FloatArray, vFlat: FloatArray) {
+    public fun writeKv(
+        kFlat: FloatArray,
+        vFlat: FloatArray,
+    ) {
         val pos = len
         val base = pos * posStride
         if (base + posStride > buf.size) {
@@ -653,7 +715,11 @@ public class RawInterleavedKvCache(
         len += 1
     }
 
-    public fun writeKvBatch(kFlat: FloatArray, vFlat: FloatArray, seqLen: Int) {
+    public fun writeKvBatch(
+        kFlat: FloatArray,
+        vFlat: FloatArray,
+        seqLen: Int,
+    ) {
         val hd = hKv * d
         for (s in 0 until seqLen) {
             val kRow = kFlat.copyOfRange(s * hd, (s + 1) * hd)
@@ -662,8 +728,7 @@ public class RawInterleavedKvCache(
         }
     }
 
-    public fun data(): FloatArray =
-        buf.copyOfRange(0, len * posStride)
+    public fun data(): FloatArray = buf.copyOfRange(0, len * posStride)
 
     public fun reset() {
         len = 0

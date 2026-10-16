@@ -15,18 +15,20 @@ class RnnTest {
         val cpu = Device.Cpu
         val wIh = Tensor.arange(0.0f, 24.0f, cpu).reshape(12, 2).cos()
         val wHh = Tensor.arange(0.0f, 36.0f, cpu).reshape(12, 3).sin()
-        val bIh = Tensor.new(
-            floatArrayOf(-1.0f, 1.0f, -0.5f, 2.0f, -1.0f, 1.0f, -0.5f, 2.0f, -1.0f, 1.0f, -0.5f, 2.0f),
-            Shape(12),
-            cpu,
-        )
+        val bIh =
+            Tensor.new(
+                floatArrayOf(-1.0f, 1.0f, -0.5f, 2.0f, -1.0f, 1.0f, -0.5f, 2.0f, -1.0f, 1.0f, -0.5f, 2.0f),
+                Shape(12),
+                cpu,
+            )
         val bHh = bIh.cos()
-        val tensors = mapOf(
-            "weight_ih_l0" to wIh,
-            "weight_hh_l0" to wHh,
-            "bias_ih_l0" to bIh,
-            "bias_hh_l0" to bHh,
-        )
+        val tensors =
+            mapOf(
+                "weight_ih_l0" to wIh,
+                "weight_hh_l0" to wHh,
+                "bias_ih_l0" to bIh,
+                "bias_hh_l0" to bHh,
+            )
         val vb = VarBuilder.fromTensors(tensors, DType.F32, cpu)
         val lstmLayer = lstm(2, 3, LSTMConfig.default(), vb)
         var state = lstmLayer.zeroState(1)
@@ -45,12 +47,13 @@ class RnnTest {
         val wHh = Tensor.arange(0.0f, 27.0f, cpu).reshape(9, 3).sin()
         val bIh = Tensor.new(floatArrayOf(-1.0f, 1.0f, -0.5f, 2.0f, -1.0f, 1.0f, -0.5f, 2.0f, -1.0f), Shape(9), cpu)
         val bHh = bIh.cos()
-        val tensors = mapOf(
-            "weight_ih_l0" to wIh,
-            "weight_hh_l0" to wHh,
-            "bias_ih_l0" to bIh,
-            "bias_hh_l0" to bHh,
-        )
+        val tensors =
+            mapOf(
+                "weight_ih_l0" to wIh,
+                "weight_hh_l0" to wHh,
+                "bias_ih_l0" to bIh,
+                "bias_hh_l0" to bHh,
+            )
         val vb = VarBuilder.fromTensors(tensors, DType.F32, cpu)
         val gruLayer = gru(2, 3, GRUConfig.default(), vb)
         var state = gruLayer.zeroState(1)

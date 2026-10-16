@@ -17,7 +17,10 @@ import io.github.kotlinmania.candle.bail
  *
  * The resulting tensor is a scalar containing the average value over the batch.
  */
-public fun nll(inp: Tensor, target: Tensor): Tensor {
+public fun nll(
+    inp: Tensor,
+    target: Tensor,
+): Tensor {
     val bSz = target.dims1()
     return inp
         .gather(target.unsqueeze(1), D.Minus1)
@@ -36,7 +39,10 @@ public fun nll(inp: Tensor, target: Tensor): Tensor {
  *
  * The resulting tensor is a scalar containing the average value over the batch.
  */
-public fun crossEntropy(inp: Tensor, target: Tensor): Tensor {
+public fun crossEntropy(
+    inp: Tensor,
+    target: Tensor,
+): Tensor {
     if (inp.rank() != 2) {
         bail("cross_entropy expects an input tensor of rank 2")
     }
@@ -47,8 +53,10 @@ public fun crossEntropy(inp: Tensor, target: Tensor): Tensor {
 /**
  * The mean squared error loss.
  */
-public fun mse(inp: Tensor, target: Tensor): Tensor =
-    (inp - target).sqr().meanAll()
+public fun mse(
+    inp: Tensor,
+    target: Tensor,
+): Tensor = (inp - target).sqr().meanAll()
 
 /**
  * The binary cross-entropy with logit loss.
@@ -61,7 +69,10 @@ public fun mse(inp: Tensor, target: Tensor): Tensor =
  *
  * The resulting tensor is a scalar containing the average value over the batch.
  */
-public fun binaryCrossEntropyWithLogit(inp: Tensor, target: Tensor): Tensor {
+public fun binaryCrossEntropyWithLogit(
+    inp: Tensor,
+    target: Tensor,
+): Tensor {
     val inpSm = sigmoid(inp)
     val leftSide = target * inpSm.log()
     val rightSide = (target.affine(-1.0, 1.0)) * (inpSm.affine(-1.0, 1.0).log())
@@ -78,7 +89,11 @@ public fun binaryCrossEntropyWithLogit(inp: Tensor, target: Tensor): Tensor {
  *
  * The resulting tensor is a scalar containing the average value over all elements.
  */
-public fun huber(inp: Tensor, target: Tensor, delta: Double): Tensor {
+public fun huber(
+    inp: Tensor,
+    target: Tensor,
+    delta: Double,
+): Tensor {
     if (delta <= 0.0) {
         bail("huber expects delta > 0, got $delta")
     }

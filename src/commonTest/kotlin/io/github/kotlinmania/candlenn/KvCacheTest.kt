@@ -144,7 +144,11 @@ class KvCacheTest {
         val inf = Float.POSITIVE_INFINITY
 
         val iam1 = cache.indicesAndMask(1, listOf(true, false))
-        val mask1 = iam1.mask.narrow(1, 0, 1).squeeze(1).toVec3<Float>()
+        val mask1 =
+            iam1.mask
+                .narrow(1, 0, 1)
+                .squeeze(1)
+                .toVec3<Float>()
         assertEquals(listOf(listOf(0u), listOf(0u)), iam1.indices.toVec2<UInt>())
         assertEquals(
             listOf(
@@ -155,7 +159,11 @@ class KvCacheTest {
         )
 
         val iam2 = cache.indicesAndMask(1, listOf(true, false))
-        val mask2 = iam2.mask.narrow(1, 0, 1).squeeze(1).toVec3<Float>()
+        val mask2 =
+            iam2.mask
+                .narrow(1, 0, 1)
+                .squeeze(1)
+                .toVec3<Float>()
         assertEquals(listOf(listOf(1u), listOf(0u)), iam2.indices.toVec2<UInt>())
         assertEquals(
             listOf(
@@ -166,7 +174,11 @@ class KvCacheTest {
         )
 
         val iam3 = cache.indicesAndMask(3, listOf(false, true))
-        val mask3 = iam3.mask.narrow(1, 0, 1).squeeze(1).toVec3<Float>()
+        val mask3 =
+            iam3.mask
+                .narrow(1, 0, 1)
+                .squeeze(1)
+                .toVec3<Float>()
         assertEquals(listOf(listOf(2u, 2u, 2u), listOf(0u, 1u, 2u)), iam3.indices.toVec2<UInt>())
         assertEquals(
             listOf(

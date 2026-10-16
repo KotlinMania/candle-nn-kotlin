@@ -14,20 +14,54 @@ import io.github.kotlinmania.candle.bail
 import io.github.kotlinmania.candle.cat
 import io.github.kotlinmania.candle.dims4
 
-private fun wrapRopeCpuStorage(dtype: DType, dst: List<Double>): CpuStorage =
+private fun wrapRopeCpuStorage(
+    dtype: DType,
+    dst: List<Double>,
+): CpuStorage =
     when (dtype) {
-        DType.U8 -> CpuStorage.U8(dst)
-        DType.U32 -> CpuStorage.U32(dst)
-        DType.I16 -> CpuStorage.I16(dst)
-        DType.I32 -> CpuStorage.I32(dst)
-        DType.I64 -> CpuStorage.I64(dst)
-        DType.BF16 -> CpuStorage.BF16(dst)
-        DType.F16 -> CpuStorage.F16(dst)
-        DType.F32 -> CpuStorage.F32(dst)
-        DType.F64 -> CpuStorage.F64(dst)
-        DType.F8E4M3 -> CpuStorage.F8E4M3(dst)
-        DType.F6E2M3, DType.F6E3M2, DType.F4, DType.F8E8M0 ->
+        DType.U8 -> {
+            CpuStorage.U8(dst)
+        }
+
+        DType.U32 -> {
+            CpuStorage.U32(dst)
+        }
+
+        DType.I16 -> {
+            CpuStorage.I16(dst)
+        }
+
+        DType.I32 -> {
+            CpuStorage.I32(dst)
+        }
+
+        DType.I64 -> {
+            CpuStorage.I64(dst)
+        }
+
+        DType.BF16 -> {
+            CpuStorage.BF16(dst)
+        }
+
+        DType.F16 -> {
+            CpuStorage.F16(dst)
+        }
+
+        DType.F32 -> {
+            CpuStorage.F32(dst)
+        }
+
+        DType.F64 -> {
+            CpuStorage.F64(dst)
+        }
+
+        DType.F8E4M3 -> {
+            CpuStorage.F8E4M3(dst)
+        }
+
+        DType.F6E2M3, DType.F6E3M2, DType.F4, DType.F8E8M0 -> {
             throw CandleException.UnsupportedDTypeForOp(dtype, "rope")
+        }
     }
 
 internal class RopeIOp : CustomOp3 {
@@ -250,24 +284,34 @@ private fun checkRopeArguments(
 /**
  * Contiguous variant of rope embeddings (interleaved pairs).
  */
-public fun ropeI(xs: Tensor, cos: Tensor, sin: Tensor): Tensor {
+public fun ropeI(
+    xs: Tensor,
+    cos: Tensor,
+    sin: Tensor,
+): Tensor {
     val dims = xs.dims4()
     checkRopeArguments(dims.d0, dims.d2, dims.d3, cos, sin)
     return xs.applyOp3NoBwd(cos, sin, RopeIOp())
 }
 
-public fun ropeISlow(x: Tensor, cos: Tensor, sin: Tensor): Tensor {
+public fun ropeISlow(
+    x: Tensor,
+    cos: Tensor,
+    sin: Tensor,
+): Tensor {
     val dims = x.dims4()
     val bSz = dims.d0
     val nHead = dims.d1
     val seqLen = dims.d2
     val nEmbd = dims.d3
-    val cosReshaped = cos
-        .reshape(Shape(seqLen, nEmbd / 2, 1))
-        .broadcastLeft(Shape(bSz, nHead))
-    val sinReshaped = sin
-        .reshape(Shape(seqLen, nEmbd / 2, 1))
-        .broadcastLeft(Shape(bSz, nHead))
+    val cosReshaped =
+        cos
+            .reshape(Shape(seqLen, nEmbd / 2, 1))
+            .broadcastLeft(Shape(bSz, nHead))
+    val sinReshaped =
+        sin
+            .reshape(Shape(seqLen, nEmbd / 2, 1))
+            .broadcastLeft(Shape(bSz, nHead))
     val xReshaped = x.reshape(Shape(bSz, nHead, seqLen, nEmbd / 2, 2))
     val x0 = xReshaped.narrow(D.Minus1, 0, 1)
     val x1 = xReshaped.narrow(D.Minus1, 1, 1)
@@ -279,13 +323,21 @@ public fun ropeISlow(x: Tensor, cos: Tensor, sin: Tensor): Tensor {
 /**
  * Split-half variant of rotary position embeddings for `(B, H, T, D)` tensors.
  */
-public fun rope(xs: Tensor, cos: Tensor, sin: Tensor): Tensor {
+public fun rope(
+    xs: Tensor,
+    cos: Tensor,
+    sin: Tensor,
+): Tensor {
     val dims = xs.dims4()
     checkRopeArguments(dims.d0, dims.d2, dims.d3, cos, sin)
     return xs.applyOp3NoBwd(cos, sin, RopeOp())
 }
 
-public fun ropeSlow(x: Tensor, cos: Tensor, sin: Tensor): Tensor {
+public fun ropeSlow(
+    x: Tensor,
+    cos: Tensor,
+    sin: Tensor,
+): Tensor {
     val nEmbd = x.dims4().d3
     val cosUnsqueezed = cos.unsqueeze(0).unsqueeze(0)
     val sinUnsqueezed = sin.unsqueeze(0).unsqueeze(0)
@@ -300,13 +352,21 @@ public fun ropeSlow(x: Tensor, cos: Tensor, sin: Tensor): Tensor {
 /**
  * Split-half variant of rotary position embeddings for `(B, T, H, D)` tensors.
  */
-public fun ropeThd(xs: Tensor, cos: Tensor, sin: Tensor): Tensor {
+public fun ropeThd(
+    xs: Tensor,
+    cos: Tensor,
+    sin: Tensor,
+): Tensor {
     val dims = xs.dims4()
     checkRopeArguments(dims.d0, dims.d1, dims.d3, cos, sin)
     return xs.applyOp3NoBwd(cos, sin, RopeThdOp())
 }
 
-public fun ropeThdSlow(x: Tensor, cos: Tensor, sin: Tensor): Tensor {
+public fun ropeThdSlow(
+    x: Tensor,
+    cos: Tensor,
+    sin: Tensor,
+): Tensor {
     val nEmbd = x.dims4().d3
     val cosUnsqueezed = cos.unsqueeze(0).unsqueeze(2)
     val sinUnsqueezed = sin.unsqueeze(0).unsqueeze(2)

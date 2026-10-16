@@ -35,6 +35,7 @@ public enum class FanInOut {
                     dims[1] * receptiveFieldSize
                 }
             }
+
             FanOut -> {
                 if (dims.isEmpty()) {
                     1
@@ -98,8 +99,7 @@ public class NonLinearity(
         public val Tanh: NonLinearity = NonLinearity(NonLinearityKind.Tanh)
         public val SELU: NonLinearity = NonLinearity(NonLinearityKind.SELU)
 
-        public fun ExplicitGain(g: Double): NonLinearity =
-            NonLinearity(NonLinearityKind.ExplicitGain, g)
+        public fun ExplicitGain(g: Double): NonLinearity = NonLinearity(NonLinearityKind.ExplicitGain, g)
     }
 }
 
@@ -142,8 +142,15 @@ public class Init(
                     Var.fromTensor(Tensor.ones(s, dtype, device).affine(cst, 0.0))
                 }
             }
-            InitKind.Uniform -> Var.randF64(lo, up, s, dtype, device)
-            InitKind.Randn -> Var.randnF64(mean, stdev, s, dtype, device)
+
+            InitKind.Uniform -> {
+                Var.randF64(lo, up, s, dtype, device)
+            }
+
+            InitKind.Randn -> {
+                Var.randnF64(mean, stdev, s, dtype, device)
+            }
+
             InitKind.Kaiming -> {
                 val fanVal = fan.forShape(s)
                 val gain = nonLinearity.gain()
@@ -153,7 +160,10 @@ public class Init(
                         val bound = sqrt(3.0) * std
                         Var.randF64(-bound, bound, s, dtype, device)
                     }
-                    NormalOrUniform.Normal -> Var.randnF64(0.0, std, s, dtype, device)
+
+                    NormalOrUniform.Normal -> {
+                        Var.randnF64(0.0, std, s, dtype, device)
+                    }
                 }
             }
         }

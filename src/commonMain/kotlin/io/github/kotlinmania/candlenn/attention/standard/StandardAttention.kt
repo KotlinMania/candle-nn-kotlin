@@ -30,35 +30,39 @@ public fun runFlashAttnCpu(
     if (b != 1) {
         bail(
             "standard runFlashAttnCpu is B=1 only (got B=$b). " +
-                "Multi-batch should be routed through the varlen path."
+                "Multi-batch should be routed through the varlen path.",
         )
     }
 
     val (qGuard, qLayout) = q.storageAndLayout()
-    val qData = when (qGuard) {
-        is Storage.Cpu -> qGuard.storage.toFloatArraySlice(qLayout.startOffset())
-        else -> bail("Expected CPU storage for q")
-    }
-    val (kGuard, kLayout) = k.storageAndLayout()
-    val kData = when (kGuard) {
-        is Storage.Cpu -> kGuard.storage.toFloatArraySlice(kLayout.startOffset())
-        else -> bail("Expected CPU storage for k")
-    }
-    val (vGuard, vLayout) = v.storageAndLayout()
-    val vData = when (vGuard) {
-        is Storage.Cpu -> vGuard.storage.toFloatArraySlice(vLayout.startOffset())
-        else -> bail("Expected CPU storage for v")
-    }
-    val maskCont = mask?.contiguous()
-    val maskData = if (maskCont != null) {
-        val (mGuard, mLayout) = maskCont.storageAndLayout()
-        when (mGuard) {
-            is Storage.Cpu -> mGuard.storage.toFloatArraySlice(mLayout.startOffset())
-            else -> bail("Expected CPU storage for mask")
+    val qData =
+        when (qGuard) {
+            is Storage.Cpu -> qGuard.storage.toFloatArraySlice(qLayout.startOffset())
+            else -> bail("Expected CPU storage for q")
         }
-    } else {
-        null
-    }
+    val (kGuard, kLayout) = k.storageAndLayout()
+    val kData =
+        when (kGuard) {
+            is Storage.Cpu -> kGuard.storage.toFloatArraySlice(kLayout.startOffset())
+            else -> bail("Expected CPU storage for k")
+        }
+    val (vGuard, vLayout) = v.storageAndLayout()
+    val vData =
+        when (vGuard) {
+            is Storage.Cpu -> vGuard.storage.toFloatArraySlice(vLayout.startOffset())
+            else -> bail("Expected CPU storage for v")
+        }
+    val maskCont = mask?.contiguous()
+    val maskData =
+        if (maskCont != null) {
+            val (mGuard, mLayout) = maskCont.storageAndLayout()
+            when (mGuard) {
+                is Storage.Cpu -> mGuard.storage.toFloatArraySlice(mLayout.startOffset())
+                else -> bail("Expected CPU storage for mask")
+            }
+        } else {
+            null
+        }
 
     val qStride = q.stride()
     val kStride = k.stride()
@@ -230,11 +234,12 @@ private fun flashAttnDecode(
     val ssum = FloatArray(1)
 
     for (hI in 0 until h) {
-        val slope = if (maxBias > 0.0f) {
-            2.0f.pow(-maxBias * (hI + 1).toFloat() / n2.toFloat())
-        } else {
-            1.0f
-        }
+        val slope =
+            if (maxBias > 0.0f) {
+                2.0f.pow(-maxBias * (hI + 1).toFloat() / n2.toFloat())
+            } else {
+                1.0f
+            }
 
         val kHead = hI / rk2
         val vHead = hI / rv2
@@ -245,11 +250,12 @@ private fun flashAttnDecode(
         ssum[0] = 0.0f
 
         for (kvPos in 0 until kvLen) {
-            val mv = if (maskVec != null) {
-                slope * maskVec[kvPos]
-            } else {
-                0.0f
-            }
+            val mv =
+                if (maskVec != null) {
+                    slope * maskVec[kvPos]
+                } else {
+                    0.0f
+                }
             if (mv == Float.NEGATIVE_INFINITY) {
                 continue
             }
@@ -391,11 +397,12 @@ private fun flashAttnPrefill(
     for (rowIdx in 0 until h * qLen) {
         val hI = rowIdx / qLen
         val qPos = rowIdx % qLen
-        val slope = if (maxBias > 0.0f) {
-            2.0f.pow(-maxBias * (hI + 1).toFloat() / n2.toFloat())
-        } else {
-            1.0f
-        }
+        val slope =
+            if (maxBias > 0.0f) {
+                2.0f.pow(-maxBias * (hI + 1).toFloat() / n2.toFloat())
+            } else {
+                1.0f
+            }
 
         val kHead = hI / rk2
         val vHead = hI / rv2
@@ -406,11 +413,12 @@ private fun flashAttnPrefill(
         ssum[0] = 0.0f
 
         for (kvPos in 0 until kvLen) {
-            val mv = if (maskVec != null) {
-                slope * maskVec[qPos * kvLen + kvPos]
-            } else {
-                0.0f
-            }
+            val mv =
+                if (maskVec != null) {
+                    slope * maskVec[qPos * kvLen + kvPos]
+                } else {
+                    0.0f
+                }
             if (mv == Float.NEGATIVE_INFINITY) {
                 continue
             }

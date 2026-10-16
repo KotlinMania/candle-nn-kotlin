@@ -15,7 +15,10 @@ public class LSTMState(
     internal val c: Tensor,
 ) {
     public companion object {
-        public fun new(h: Tensor, c: Tensor): LSTMState = LSTMState(h, c)
+        public fun new(
+            h: Tensor,
+            c: Tensor,
+        ): LSTMState = LSTMState(h, c)
     }
 
     /**
@@ -47,14 +50,15 @@ public data class LSTMConfig(
     public companion object {
         public fun default(): LSTMConfig = LSTMConfig()
 
-        public fun defaultNoBias(): LSTMConfig = LSTMConfig(
-            wIhInit = DEFAULT_KAIMING_UNIFORM,
-            wHhInit = DEFAULT_KAIMING_UNIFORM,
-            bIhInit = null,
-            bHhInit = null,
-            layerIdx = 0,
-            direction = Direction.Forward,
-        )
+        public fun defaultNoBias(): LSTMConfig =
+            LSTMConfig(
+                wIhInit = DEFAULT_KAIMING_UNIFORM,
+                wHhInit = DEFAULT_KAIMING_UNIFORM,
+                bIhInit = null,
+                bHhInit = null,
+                layerIdx = 0,
+                direction = Direction.Forward,
+            )
     }
 }
 
@@ -82,34 +86,39 @@ public class LSTM(
             vb: VarBuilder,
         ): LSTM {
             val layerIdx = config.layerIdx
-            val directionStr = when (config.direction) {
-                Direction.Forward -> ""
-                Direction.Backward -> "_reverse"
-            }
-            val wIh = vb.getWithHints(
-                Shape(4 * hiddenDim, inDim),
-                "weight_ih_l$layerIdx$directionStr",
-                config.wIhInit,
-            )
-            val wHh = vb.getWithHints(
-                Shape(4 * hiddenDim, hiddenDim),
-                "weight_hh_l$layerIdx$directionStr",
-                config.wHhInit,
-            )
-            val bIh = config.bIhInit?.let { init ->
+            val directionStr =
+                when (config.direction) {
+                    Direction.Forward -> ""
+                    Direction.Backward -> "_reverse"
+                }
+            val wIh =
                 vb.getWithHints(
-                    4 * hiddenDim,
-                    "bias_ih_l$layerIdx$directionStr",
-                    init,
+                    Shape(4 * hiddenDim, inDim),
+                    "weight_ih_l$layerIdx$directionStr",
+                    config.wIhInit,
                 )
-            }
-            val bHh = config.bHhInit?.let { init ->
+            val wHh =
                 vb.getWithHints(
-                    4 * hiddenDim,
-                    "bias_hh_l$layerIdx$directionStr",
-                    init,
+                    Shape(4 * hiddenDim, hiddenDim),
+                    "weight_hh_l$layerIdx$directionStr",
+                    config.wHhInit,
                 )
-            }
+            val bIh =
+                config.bIhInit?.let { init ->
+                    vb.getWithHints(
+                        4 * hiddenDim,
+                        "bias_ih_l$layerIdx$directionStr",
+                        init,
+                    )
+                }
+            val bHh =
+                config.bHhInit?.let { init ->
+                    vb.getWithHints(
+                        4 * hiddenDim,
+                        "bias_hh_l$layerIdx$directionStr",
+                        init,
+                    )
+                }
             return LSTM(
                 wIh = wIh,
                 wHh = wHh,
@@ -130,17 +139,22 @@ public class LSTM(
         return LSTMState(h = zeros, c = zeros)
     }
 
-    public fun step(input: Tensor, inState: LSTMState): LSTMState {
+    public fun step(
+        input: Tensor,
+        inState: LSTMState,
+    ): LSTMState {
         val wIhOut0 = input.matmul(wIh.t())
         val wHhOut0 = inState.h.matmul(wHh.t())
-        val wIhOut = when (bIh) {
-            null -> wIhOut0
-            else -> wIhOut0.broadcastAdd(bIh)
-        }
-        val wHhOut = when (bHh) {
-            null -> wHhOut0
-            else -> wHhOut0.broadcastAdd(bHh)
-        }
+        val wIhOut =
+            when (bIh) {
+                null -> wIhOut0
+                else -> wIhOut0.broadcastAdd(bIh)
+            }
+        val wHhOut =
+            when (bHh) {
+                null -> wHhOut0
+                else -> wHhOut0.broadcastAdd(bHh)
+            }
         val chunks = (wIhOut + wHhOut).chunk(4, 1)
         val inGate = sigmoid(chunks[0])
         val forgetGate = sigmoid(chunks[1])
@@ -158,16 +172,20 @@ public class LSTM(
         return seqInit(input, state)
     }
 
-    public fun seqInit(input: Tensor, initState: LSTMState): List<LSTMState> {
+    public fun seqInit(
+        input: Tensor,
+        initState: LSTMState,
+    ): List<LSTMState> {
         val (_, seqLen, _) = input.dims3()
         val output = ArrayList<LSTMState>(seqLen)
         for (seqIndex in 0 until seqLen) {
             val stepInput = input.narrow(1, seqIndex, 1).squeeze(1).contiguous()
-            val state = if (seqIndex == 0) {
-                step(stepInput, initState)
-            } else {
-                step(stepInput, output[seqIndex - 1])
-            }
+            val state =
+                if (seqIndex == 0) {
+                    step(stepInput, initState)
+                } else {
+                    step(stepInput, output[seqIndex - 1])
+                }
             output.add(state)
         }
         return output
@@ -212,12 +230,13 @@ public data class GRUConfig(
     public companion object {
         public fun default(): GRUConfig = GRUConfig()
 
-        public fun defaultNoBias(): GRUConfig = GRUConfig(
-            wIhInit = DEFAULT_KAIMING_UNIFORM,
-            wHhInit = DEFAULT_KAIMING_UNIFORM,
-            bIhInit = null,
-            bHhInit = null,
-        )
+        public fun defaultNoBias(): GRUConfig =
+            GRUConfig(
+                wIhInit = DEFAULT_KAIMING_UNIFORM,
+                wHhInit = DEFAULT_KAIMING_UNIFORM,
+                bIhInit = null,
+                bHhInit = null,
+            )
     }
 }
 
@@ -244,22 +263,26 @@ public class GRU(
             config: GRUConfig,
             vb: VarBuilder,
         ): GRU {
-            val wIh = vb.getWithHints(
-                Shape(3 * hiddenDim, inDim),
-                "weight_ih_l0",
-                config.wIhInit,
-            )
-            val wHh = vb.getWithHints(
-                Shape(3 * hiddenDim, hiddenDim),
-                "weight_hh_l0",
-                config.wHhInit,
-            )
-            val bIh = config.bIhInit?.let { init ->
-                vb.getWithHints(3 * hiddenDim, "bias_ih_l0", init)
-            }
-            val bHh = config.bHhInit?.let { init ->
-                vb.getWithHints(3 * hiddenDim, "bias_hh_l0", init)
-            }
+            val wIh =
+                vb.getWithHints(
+                    Shape(3 * hiddenDim, inDim),
+                    "weight_ih_l0",
+                    config.wIhInit,
+                )
+            val wHh =
+                vb.getWithHints(
+                    Shape(3 * hiddenDim, hiddenDim),
+                    "weight_hh_l0",
+                    config.wHhInit,
+                )
+            val bIh =
+                config.bIhInit?.let { init ->
+                    vb.getWithHints(3 * hiddenDim, "bias_ih_l0", init)
+                }
+            val bHh =
+                config.bHhInit?.let { init ->
+                    vb.getWithHints(3 * hiddenDim, "bias_hh_l0", init)
+                }
             return GRU(
                 wIh = wIh,
                 wHh = wHh,
@@ -280,17 +303,22 @@ public class GRU(
         return GRUState(h)
     }
 
-    public fun step(input: Tensor, inState: GRUState): GRUState {
+    public fun step(
+        input: Tensor,
+        inState: GRUState,
+    ): GRUState {
         val wIhOut0 = input.matmul(wIh.t())
         val wHhOut0 = inState.h.matmul(wHh.t())
-        val wIhOut = when (bIh) {
-            null -> wIhOut0
-            else -> wIhOut0.broadcastAdd(bIh)
-        }
-        val wHhOut = when (bHh) {
-            null -> wHhOut0
-            else -> wHhOut0.broadcastAdd(bHh)
-        }
+        val wIhOut =
+            when (bIh) {
+                null -> wIhOut0
+                else -> wIhOut0.broadcastAdd(bIh)
+            }
+        val wHhOut =
+            when (bHh) {
+                null -> wHhOut0
+                else -> wHhOut0.broadcastAdd(bHh)
+            }
         val chunksIh = wIhOut.chunk(3, 1)
         val chunksHh = wHhOut.chunk(3, 1)
         val rGate = sigmoid(chunksIh[0] + chunksHh[0])
@@ -307,16 +335,20 @@ public class GRU(
         return seqInit(input, state)
     }
 
-    public fun seqInit(input: Tensor, initState: GRUState): List<GRUState> {
+    public fun seqInit(
+        input: Tensor,
+        initState: GRUState,
+    ): List<GRUState> {
         val (_, seqLen, _) = input.dims3()
         val output = ArrayList<GRUState>(seqLen)
         for (seqIndex in 0 until seqLen) {
             val stepInput = input.narrow(1, seqIndex, 1).squeeze(1).contiguous()
-            val state = if (seqIndex == 0) {
-                step(stepInput, initState)
-            } else {
-                step(stepInput, output[seqIndex - 1])
-            }
+            val state =
+                if (seqIndex == 0) {
+                    step(stepInput, initState)
+                } else {
+                    step(stepInput, output[seqIndex - 1])
+                }
             output.add(state)
         }
         return output

@@ -18,10 +18,21 @@ class OpsTest {
     @Test
     fun softmaxCpu() {
         val device = Device.Cpu
-        val data = floatArrayOf(
-            3.0f, 1.0f, 4.0f, 1.0f, 5.0f, 9.0f,
-            2.0f, 1.0f, 7.0f, 8.0f, 2.0f, 8.0f,
-        )
+        val data =
+            floatArrayOf(
+                3.0f,
+                1.0f,
+                4.0f,
+                1.0f,
+                5.0f,
+                9.0f,
+                2.0f,
+                1.0f,
+                7.0f,
+                8.0f,
+                2.0f,
+                8.0f,
+            )
         val tensor = Tensor.new(data, Shape(2, 2, 3), device)
         val t0 = softmax(tensor.log(), 0)
         val t1 = softmax(tensor.log(), 1)
@@ -60,10 +71,21 @@ class OpsTest {
     @Test
     fun rmsNormCpu() {
         val device = Device.Cpu
-        val data = floatArrayOf(
-            3.0f, 1.0f, 4.0f, 1.0f, 5.0f, 9.0f,
-            2.0f, 1.0f, 7.0f, 8.0f, 2.0f, 8.0f,
-        )
+        val data =
+            floatArrayOf(
+                3.0f,
+                1.0f,
+                4.0f,
+                1.0f,
+                5.0f,
+                9.0f,
+                2.0f,
+                1.0f,
+                7.0f,
+                8.0f,
+                2.0f,
+                8.0f,
+            )
         val tensor = Tensor.new(data, Shape(2, 2, 3), device)
         val alpha = Tensor.new(floatArrayOf(1.0f, 2.0f, 3.0f), Shape(3), device)
         val t = rmsNorm(tensor, alpha, 1e-5f)
@@ -82,7 +104,12 @@ class OpsTest {
             ),
             toVec3Round(t2, 4),
         )
-        val diff = t.sub(t2).abs().sumAll().toVec0<Float>()
+        val diff =
+            t
+                .sub(t2)
+                .abs()
+                .sumAll()
+                .toVec0<Float>()
         assertTrue(diff < 1e-5f)
     }
 
@@ -91,10 +118,11 @@ class OpsTest {
         val device = Device.Cpu
         val rows = 4
         val hidden = 512
-        val data = List(rows * hidden) { i ->
-            val sign = if (i % 2 == 0) 1.0f else -1.0f
-            sign * (abs(sin(i.toFloat() * 0.17f)) * 7e9f)
-        }
+        val data =
+            List(rows * hidden) { i ->
+                val sign = if (i % 2 == 0) 1.0f else -1.0f
+                sign * (abs(sin(i.toFloat() * 0.17f)) * 7e9f)
+            }
         val tensor = Tensor.fromVec(data, Shape(rows, hidden), device)
         val alpha = Tensor.ones(Shape(hidden), DType.F32, device)
 
@@ -119,10 +147,21 @@ class OpsTest {
     @Test
     fun layerNormOpCpu() {
         val device = Device.Cpu
-        val data = floatArrayOf(
-            3.0f, 1.0f, 4.0f, 1.0f, 5.0f, 9.0f,
-            2.0f, 1.0f, 7.0f, 8.0f, 2.0f, 8.0f,
-        )
+        val data =
+            floatArrayOf(
+                3.0f,
+                1.0f,
+                4.0f,
+                1.0f,
+                5.0f,
+                9.0f,
+                2.0f,
+                1.0f,
+                7.0f,
+                8.0f,
+                2.0f,
+                8.0f,
+            )
         val tensor = Tensor.new(data, Shape(2, 2, 3), device)
         val alpha = Tensor.new(floatArrayOf(1.0f, 2.0f, 3.0f), Shape(3), device)
         val beta = Tensor.new(floatArrayOf(0.5f, 0.0f, -0.2f), Shape(3), device)
@@ -142,7 +181,12 @@ class OpsTest {
             ),
             toVec3Round(t2, 4),
         )
-        val diff = t.sub(t2).abs().sumAll().toVec0<Float>()
+        val diff =
+            t
+                .sub(t2)
+                .abs()
+                .sumAll()
+                .toVec0<Float>()
         assertTrue(diff < 1e-5f)
     }
 
@@ -163,24 +207,32 @@ class OpsTest {
         val headDim = 16
         val elCount = bSize * numHead * seqLen * headDim
         val rng = Random(299792458L)
-        val src = Tensor.fromVec(
-            List(elCount) { rng.nextFloat() },
-            Shape(bSize, numHead, seqLen, headDim),
-            device,
-        )
-        val cos = Tensor.fromVec(
-            List(seqLen * headDim / 2) { rng.nextFloat() },
-            Shape(seqLen, headDim / 2),
-            device,
-        )
-        val sin = Tensor.fromVec(
-            List(seqLen * headDim / 2) { rng.nextFloat() },
-            Shape(seqLen, headDim / 2),
-            device,
-        )
+        val src =
+            Tensor.fromVec(
+                List(elCount) { rng.nextFloat() },
+                Shape(bSize, numHead, seqLen, headDim),
+                device,
+            )
+        val cos =
+            Tensor.fromVec(
+                List(seqLen * headDim / 2) { rng.nextFloat() },
+                Shape(seqLen, headDim / 2),
+                device,
+            )
+        val sin =
+            Tensor.fromVec(
+                List(seqLen * headDim / 2) { rng.nextFloat() },
+                Shape(seqLen, headDim / 2),
+                device,
+            )
         val rope1 = ropeI(src, cos, sin)
         val rope2 = ropeISlow(src, cos, sin)
-        val sumDiff = rope1.sub(rope2).abs().sumAll().toVec0<Float>()
+        val sumDiff =
+            rope1
+                .sub(rope2)
+                .abs()
+                .sumAll()
+                .toVec0<Float>()
         assertTrue(sumDiff < 1e-4f)
     }
 
@@ -193,24 +245,32 @@ class OpsTest {
         val headDim = 16
         val elCount = bSize * numHead * seqLen * headDim
         val rng = Random(299792458L)
-        val src = Tensor.fromVec(
-            List(elCount) { rng.nextFloat() },
-            Shape(bSize, numHead, seqLen, headDim),
-            device,
-        )
-        val cos = Tensor.fromVec(
-            List(seqLen * headDim / 2) { rng.nextFloat() },
-            Shape(seqLen, headDim / 2),
-            device,
-        )
-        val sin = Tensor.fromVec(
-            List(seqLen * headDim / 2) { rng.nextFloat() },
-            Shape(seqLen, headDim / 2),
-            device,
-        )
+        val src =
+            Tensor.fromVec(
+                List(elCount) { rng.nextFloat() },
+                Shape(bSize, numHead, seqLen, headDim),
+                device,
+            )
+        val cos =
+            Tensor.fromVec(
+                List(seqLen * headDim / 2) { rng.nextFloat() },
+                Shape(seqLen, headDim / 2),
+                device,
+            )
+        val sin =
+            Tensor.fromVec(
+                List(seqLen * headDim / 2) { rng.nextFloat() },
+                Shape(seqLen, headDim / 2),
+                device,
+            )
         val rope1 = rope(src, cos, sin)
         val rope2 = ropeSlow(src, cos, sin)
-        val sumDiff = rope1.sub(rope2).abs().sumAll().toVec0<Float>()
+        val sumDiff =
+            rope1
+                .sub(rope2)
+                .abs()
+                .sumAll()
+                .toVec0<Float>()
         assertTrue(sumDiff < 1e-4f)
     }
 
@@ -223,38 +283,62 @@ class OpsTest {
         val headDim = 16
         val elCount = bSize * numHead * seqLen * headDim
         val rng = Random(299792458L)
-        val src = Tensor.fromVec(
-            List(elCount) { rng.nextFloat() },
-            Shape(bSize, numHead, seqLen, headDim),
-            device,
-        )
-        val cos = Tensor.fromVec(
-            List(seqLen * headDim / 2) { rng.nextFloat() },
-            Shape(seqLen, headDim / 2),
-            device,
-        )
-        val sin = Tensor.fromVec(
-            List(seqLen * headDim / 2) { rng.nextFloat() },
-            Shape(seqLen, headDim / 2),
-            device,
-        )
+        val src =
+            Tensor.fromVec(
+                List(elCount) { rng.nextFloat() },
+                Shape(bSize, numHead, seqLen, headDim),
+                device,
+            )
+        val cos =
+            Tensor.fromVec(
+                List(seqLen * headDim / 2) { rng.nextFloat() },
+                Shape(seqLen, headDim / 2),
+                device,
+            )
+        val sin =
+            Tensor.fromVec(
+                List(seqLen * headDim / 2) { rng.nextFloat() },
+                Shape(seqLen, headDim / 2),
+                device,
+            )
         val rope1 = ropeThd(src.transpose(1, 2).contiguous(), cos, sin).transpose(1, 2)
         val rope2 = ropeSlow(src, cos, sin)
-        val sumDiff = rope1.sub(rope2).abs().sumAll().toVec0<Float>()
+        val sumDiff =
+            rope1
+                .sub(rope2)
+                .abs()
+                .sumAll()
+                .toVec0<Float>()
         assertTrue(sumDiff < 1e-4f)
     }
 
     @Test
     fun sigmoidCpu() {
         val device = Device.Cpu
-        val data = floatArrayOf(
-            3.0f, 1.0f, 4.0f, 1.0f, 5.0f, 9.0f,
-            2.0f, 1.0f, 7.0f, 8.0f, 2.0f, 8.0f,
-        )
+        val data =
+            floatArrayOf(
+                3.0f,
+                1.0f,
+                4.0f,
+                1.0f,
+                5.0f,
+                9.0f,
+                2.0f,
+                1.0f,
+                7.0f,
+                8.0f,
+                2.0f,
+                8.0f,
+            )
         val tensor = Tensor.new(data, Shape(2, 2, 3), device)
         val s1 = sigmoid(tensor)
         val s2 = (tensor.neg().exp() + 1.0).recip()
-        val diff = s1.sub(s2).abs().sumAll().toVec0<Float>()
+        val diff =
+            s1
+                .sub(s2)
+                .abs()
+                .sumAll()
+                .toVec0<Float>()
         assertTrue(diff < 1e-5f)
     }
 }

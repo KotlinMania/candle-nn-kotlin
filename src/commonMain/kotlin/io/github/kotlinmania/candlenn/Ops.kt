@@ -30,7 +30,10 @@ import kotlin.math.sqrt
  * Applies the softmax function to the input tensor, rescaling the element so that elements on
  * a slice of fixed index on dimension `dim` are between 0 and 1 and sum to 1.
  */
-public fun softmax(xs: Tensor, dim: Int): Tensor {
+public fun softmax(
+    xs: Tensor,
+    dim: Int,
+): Tensor {
     val dimIdx = Shape.toIndex(dim, xs.shape(), "softmax")
     val max = xs.maxKeepdim(dimIdx)
     val diff = xs.broadcastSub(max)
@@ -42,10 +45,15 @@ public fun softmax(xs: Tensor, dim: Int): Tensor {
 /**
  * Applies the softmax function to the input tensor along the given dimension.
  */
-public fun softmax(xs: Tensor, dim: ShapeDim): Tensor =
-    softmax(xs, dim.toIndex(xs.shape(), "softmax"))
+public fun softmax(
+    xs: Tensor,
+    dim: ShapeDim,
+): Tensor = softmax(xs, dim.toIndex(xs.shape(), "softmax"))
 
-public fun logSoftmax(xs: Tensor, dim: Int): Tensor {
+public fun logSoftmax(
+    xs: Tensor,
+    dim: Int,
+): Tensor {
     val d = Shape.toIndex(dim, xs.shape(), "log-softmax")
     val max = xs.maxKeepdim(d)
     val diff = xs.broadcastSub(max)
@@ -54,8 +62,10 @@ public fun logSoftmax(xs: Tensor, dim: Int): Tensor {
     return logSm
 }
 
-public fun logSoftmax(xs: Tensor, dim: ShapeDim): Tensor =
-    logSoftmax(xs, dim.toIndex(xs.shape(), "log-softmax"))
+public fun logSoftmax(
+    xs: Tensor,
+    dim: ShapeDim,
+): Tensor = logSoftmax(xs, dim.toIndex(xs.shape(), "log-softmax"))
 
 public fun silu(xs: Tensor): Tensor = xs.silu()
 
@@ -64,16 +74,26 @@ public fun swiglu(xs: Tensor): Tensor {
     return chunks[0].silu() * chunks[1]
 }
 
-internal class Sigmoid : CustomOp1, Map1 {
+internal class Sigmoid :
+    CustomOp1,
+    Map1 {
     override fun name(): String = "sigmoid"
 
-    override fun f(vs: List<Double>, layout: Layout): List<Double> =
-        unaryMap(vs, layout) { v -> 1.0 / (1.0 + exp(-v)) }
+    override fun f(
+        vs: List<Double>,
+        layout: Layout,
+    ): List<Double> = unaryMap(vs, layout) { v -> 1.0 / (1.0 + exp(-v)) }
 
-    override fun cpuFwd(storage: CpuStorage, layout: Layout): Pair<CpuStorage, Shape> =
-        Pair(map(storage, layout), layout.shape())
+    override fun cpuFwd(
+        storage: CpuStorage,
+        layout: Layout,
+    ): Pair<CpuStorage, Shape> = Pair(map(storage, layout), layout.shape())
 
-    override fun bwd(arg: Tensor, res: Tensor, gradRes: Tensor): Tensor {
+    override fun bwd(
+        arg: Tensor,
+        res: Tensor,
+        gradRes: Tensor,
+    ): Tensor {
         if (arg.dtype() != res.dtype()) {
             bail("sigmoid bwd dtype mismatch")
         }
@@ -82,37 +102,52 @@ internal class Sigmoid : CustomOp1, Map1 {
     }
 }
 
-internal fun Tensor.sumKeepdim(dim: ShapeDim): Tensor =
-    sumKeepdim(dim.toIndex(shape(), "sum-keepdim"))
+internal fun Tensor.sumKeepdim(dim: ShapeDim): Tensor = sumKeepdim(dim.toIndex(shape(), "sum-keepdim"))
 
 internal operator fun Tensor.plus(rhs: Double): Tensor = add(rhs)
+
 internal operator fun Tensor.minus(rhs: Double): Tensor = sub(rhs)
+
 internal operator fun Tensor.times(rhs: Double): Tensor = mul(rhs)
+
 internal operator fun Double.times(rhs: Tensor): Tensor = rhs.mul(this)
+
 internal operator fun Double.plus(rhs: Tensor): Tensor = rhs.add(this)
+
 internal operator fun Double.minus(rhs: Tensor): Tensor = rhs.affine(-1.0, this)
 
 public fun sigmoid(xs: Tensor): Tensor = xs.applyOp1(Sigmoid())
 
-public fun hardSigmoid(xs: Tensor): Tensor =
-    ((xs + 3.0) / 6.0).clamp(0.0, 1.0)
+public fun hardSigmoid(xs: Tensor): Tensor = ((xs + 3.0) / 6.0).clamp(0.0, 1.0)
 
-public fun LeakyRelu(xs: Tensor, negativeSlope: Double): Tensor {
+public fun LeakyRelu(
+    xs: Tensor,
+    negativeSlope: Double,
+): Tensor {
     val zeros = xs.zerosLike()
     return xs.maximum(zeros) + xs.minimum(zeros) * negativeSlope
 }
 
-public fun leakyRelu(xs: Tensor, negativeSlope: Double): Tensor =
-    LeakyRelu(xs, negativeSlope)
+public fun leakyRelu(
+    xs: Tensor,
+    negativeSlope: Double,
+): Tensor = LeakyRelu(xs, negativeSlope)
 
-public fun selu(xs: Tensor, alpha: Float, gamma: Float): Tensor {
+public fun selu(
+    xs: Tensor,
+    alpha: Float,
+    gamma: Float,
+): Tensor {
     val isPos = xs.gt(xs.zerosLike())
     val t = xs.exp().affine(alpha.toDouble(), -alpha.toDouble())
     val res = isPos.whereCond(xs, t)
     return res.affine(gamma.toDouble(), 0.0)
 }
 
-public fun dropout(xs: Tensor, dropP: Float): Tensor {
+public fun dropout(
+    xs: Tensor,
+    dropP: Float,
+): Tensor {
     // This implementation is inefficient as it stores the full mask for the backward pass.
     // Instead we could just store the seed and have a specialized kernel that would both
     // generate the random mask and apply it.
@@ -135,17 +170,26 @@ public class Dropout(
         public fun new(dropP: Float): Dropout = Dropout(dropP)
     }
 
-    public fun forward(xs: Tensor, train: Boolean): Tensor =
-        if (train) dropout(xs, dropP) else xs
+    public fun forward(
+        xs: Tensor,
+        train: Boolean,
+    ): Tensor = if (train) dropout(xs, dropP) else xs
 
-    override fun forwardT(xs: Tensor, train: Boolean): Tensor =
-        forward(xs, train)
+    override fun forwardT(
+        xs: Tensor,
+        train: Boolean,
+    ): Tensor = forward(xs, train)
 }
 
-internal class SoftmaxLastDim : CustomOp1, Map1 {
+internal class SoftmaxLastDim :
+    CustomOp1,
+    Map1 {
     override fun name(): String = "softmax-last-dim"
 
-    override fun f(vs: List<Double>, layout: Layout): List<Double> {
+    override fun f(
+        vs: List<Double>,
+        layout: Layout,
+    ): List<Double> {
         if (!layout.isContiguous()) {
             throw CandleException.RequiresContiguous("softmax-last-dim")
         }
@@ -178,12 +222,13 @@ internal class SoftmaxLastDim : CustomOp1, Map1 {
         return dst
     }
 
-    override fun cpuFwd(storage: CpuStorage, layout: Layout): Pair<CpuStorage, Shape> =
-        Pair(map(storage, layout), layout.shape())
+    override fun cpuFwd(
+        storage: CpuStorage,
+        layout: Layout,
+    ): Pair<CpuStorage, Shape> = Pair(map(storage, layout), layout.shape())
 }
 
-public fun softmaxLastDim(xs: Tensor): Tensor =
-    xs.applyOp1NoBwd(SoftmaxLastDim())
+public fun softmaxLastDim(xs: Tensor): Tensor = xs.applyOp1NoBwd(SoftmaxLastDim())
 
 internal class RmsNormOp(
     private val eps: Float,
@@ -232,28 +277,67 @@ internal class RmsNormOp(
     }
 }
 
-private fun wrapCpuStorage(dtype: DType, dst: List<Double>): CpuStorage =
+private fun wrapCpuStorage(
+    dtype: DType,
+    dst: List<Double>,
+): CpuStorage =
     when (dtype) {
-        DType.U8 -> CpuStorage.U8(dst)
-        DType.U32 -> CpuStorage.U32(dst)
-        DType.I16 -> CpuStorage.I16(dst)
-        DType.I32 -> CpuStorage.I32(dst)
-        DType.I64 -> CpuStorage.I64(dst)
-        DType.BF16 -> CpuStorage.BF16(dst)
-        DType.F16 -> CpuStorage.F16(dst)
-        DType.F32 -> CpuStorage.F32(dst)
-        DType.F64 -> CpuStorage.F64(dst)
-        DType.F8E4M3 -> CpuStorage.F8E4M3(dst)
-        DType.F6E2M3, DType.F6E3M2, DType.F4, DType.F8E8M0 ->
+        DType.U8 -> {
+            CpuStorage.U8(dst)
+        }
+
+        DType.U32 -> {
+            CpuStorage.U32(dst)
+        }
+
+        DType.I16 -> {
+            CpuStorage.I16(dst)
+        }
+
+        DType.I32 -> {
+            CpuStorage.I32(dst)
+        }
+
+        DType.I64 -> {
+            CpuStorage.I64(dst)
+        }
+
+        DType.BF16 -> {
+            CpuStorage.BF16(dst)
+        }
+
+        DType.F16 -> {
+            CpuStorage.F16(dst)
+        }
+
+        DType.F32 -> {
+            CpuStorage.F32(dst)
+        }
+
+        DType.F64 -> {
+            CpuStorage.F64(dst)
+        }
+
+        DType.F8E4M3 -> {
+            CpuStorage.F8E4M3(dst)
+        }
+
+        DType.F6E2M3, DType.F6E3M2, DType.F4, DType.F8E8M0 -> {
             throw CandleException.UnsupportedDTypeForOp(dtype, "custom-op")
+        }
     }
 
-public fun rmsNormSlow(x: Tensor, alpha: Tensor, eps: Float): Tensor {
+public fun rmsNormSlow(
+    x: Tensor,
+    alpha: Tensor,
+    eps: Float,
+): Tensor {
     val xDtype = x.dtype()
-    val internalDtype = when (xDtype) {
-        DType.F16, DType.BF16 -> DType.F32
-        else -> xDtype
-    }
+    val internalDtype =
+        when (xDtype) {
+            DType.F16, DType.BF16 -> DType.F32
+            else -> xDtype
+        }
     val hiddenSize = x.dim(D.Minus1)
     val xCast = x.toDtype(internalDtype)
     val normX = (xCast.sqr().sumKeepdim(D.Minus1) / hiddenSize.toDouble())
@@ -261,7 +345,11 @@ public fun rmsNormSlow(x: Tensor, alpha: Tensor, eps: Float): Tensor {
     return xNormed.toDtype(xDtype).broadcastMul(alpha)
 }
 
-public fun rmsNorm(xs: Tensor, alpha: Tensor, eps: Float): Tensor {
+public fun rmsNorm(
+    xs: Tensor,
+    alpha: Tensor,
+    eps: Float,
+): Tensor {
     val hiddenSizeXs = xs.dim(D.Minus1)
     val hiddenSizeAlpha = alpha.dims1()
     if (hiddenSizeXs != hiddenSizeAlpha) {
@@ -324,24 +412,36 @@ internal class LayerNormOp(
     }
 }
 
-public fun layerNormSlow(x: Tensor, alpha: Tensor, beta: Tensor, eps: Float): Tensor {
+public fun layerNormSlow(
+    x: Tensor,
+    alpha: Tensor,
+    beta: Tensor,
+    eps: Float,
+): Tensor {
     val xDtype = x.dtype()
-    val internalDtype = when (xDtype) {
-        DType.F16, DType.BF16 -> DType.F32
-        else -> xDtype
-    }
+    val internalDtype =
+        when (xDtype) {
+            DType.F16, DType.BF16 -> DType.F32
+            else -> xDtype
+        }
     val hiddenSize = x.dim(D.Minus1)
     val xCast = x.toDtype(internalDtype)
-    val xSubMean = run {
-        val meanX = (xCast.sumKeepdim(D.Minus1) / hiddenSize.toDouble())
-        xCast.broadcastSub(meanX)
-    }
+    val xSubMean =
+        run {
+            val meanX = (xCast.sumKeepdim(D.Minus1) / hiddenSize.toDouble())
+            xCast.broadcastSub(meanX)
+        }
     val normX = (xSubMean.sqr().sumKeepdim(D.Minus1) / hiddenSize.toDouble())
     val xNormed = xSubMean.broadcastDiv((normX + eps.toDouble()).sqrt())
     return xNormed.toDtype(xDtype).broadcastMul(alpha).broadcastAdd(beta)
 }
 
-public fun layerNorm(xs: Tensor, alpha: Tensor, beta: Tensor, eps: Float): Tensor {
+public fun layerNorm(
+    xs: Tensor,
+    alpha: Tensor,
+    beta: Tensor,
+    eps: Float,
+): Tensor {
     val hiddenSizeXs = xs.dim(D.Minus1)
     val hiddenSizeAlpha = alpha.dims1()
     val hiddenSizeBeta = beta.dims1()
@@ -352,33 +452,47 @@ public fun layerNorm(xs: Tensor, alpha: Tensor, beta: Tensor, eps: Float): Tenso
 }
 
 // https://pytorch.org/docs/stable/generated/torch.nn.PixelShuffle.html
-public fun pixelShuffle(xs: Tensor, upscaleFactor: Int): Tensor {
+public fun pixelShuffle(
+    xs: Tensor,
+    upscaleFactor: Int,
+): Tensor {
     val dims = xs.dims4()
     val bSize = dims.d0
     val c = dims.d1
     val h = dims.d2
     val w = dims.d3
     val outC = c / upscaleFactor / upscaleFactor
-    return xs.reshape(Shape(bSize, outC, upscaleFactor, upscaleFactor, h, w))
+    return xs
+        .reshape(Shape(bSize, outC, upscaleFactor, upscaleFactor, h, w))
         .permute(0, 1, 4, 2, 5, 3)
         .reshape(Shape(bSize, outC, h * upscaleFactor, w * upscaleFactor))
 }
 
-public fun pixelUnshuffle(xs: Tensor, downscaleFactor: Int): Tensor {
+public fun pixelUnshuffle(
+    xs: Tensor,
+    downscaleFactor: Int,
+): Tensor {
     val dims = xs.dims4()
     val bSize = dims.d0
     val c = dims.d1
     val h = dims.d2
     val w = dims.d3
     val outC = c * downscaleFactor * downscaleFactor
-    return xs.reshape(Shape(bSize, c, h / downscaleFactor, downscaleFactor, w / downscaleFactor, downscaleFactor))
+    return xs
+        .reshape(Shape(bSize, c, h / downscaleFactor, downscaleFactor, w / downscaleFactor, downscaleFactor))
         .permute(0, 1, 3, 5, 2, 4)
         .reshape(Shape(bSize, outC, h / downscaleFactor, w / downscaleFactor))
 }
 
-public fun replicationPad2d(xs: Tensor, pad: Int): Tensor {
+public fun replicationPad2d(
+    xs: Tensor,
+    pad: Int,
+): Tensor {
     when (pad) {
-        0 -> return xs
+        0 -> {
+            return xs
+        }
+
         1 -> {
             val dims = xs.dims4()
             val h = dims.d2
@@ -390,7 +504,10 @@ public fun replicationPad2d(xs: Tensor, pad: Int): Tensor {
             val lastH = xsPaddedW.narrow(2, h - 1, 1)
             return Tensor.cat(listOf(firstH, xsPaddedW, lastH), 2)
         }
-        else -> bail("replication-pad with size $pad is not supported")
+
+        else -> {
+            bail("replication-pad with size $pad is not supported")
+        }
     }
 }
 
@@ -410,11 +527,12 @@ public fun sdpa(
     softcapping: Float,
 ): Tensor {
     val att = (q.matmul(k.t()) * scale.toDouble())
-    val attCapped = if (softcapping == 1.0f) {
-        att
-    } else {
-        (att / softcapping.toDouble()).tanh() * softcapping.toDouble()
-    }
+    val attCapped =
+        if (softcapping == 1.0f) {
+            att
+        } else {
+            (att / softcapping.toDouble()).tanh() * softcapping.toDouble()
+        }
     val attSoftmax = softmaxLastDim(attCapped)
     return attSoftmax.matmul(v)
 }
@@ -422,5 +540,4 @@ public fun sdpa(
 /**
  * Applies the Mish activation function: `x * tanh(softplus(x)) = x * tanh(ln(1 + exp(x)))`.
  */
-public fun mish(xs: Tensor): Tensor =
-    xs * (1.0 + xs.exp()).log().tanh()
+public fun mish(xs: Tensor): Tensor = xs * (1.0 + xs.exp()).log().tanh()

@@ -13,8 +13,10 @@ public class Embedding(
     private val hiddenSize: Int,
 ) : Module {
     public companion object {
-        public fun new(embeddings: Tensor, hiddenSize: Int): Embedding =
-            Embedding(embeddings, hiddenSize)
+        public fun new(
+            embeddings: Tensor,
+            hiddenSize: Int,
+        ): Embedding = Embedding(embeddings, hiddenSize)
     }
 
     public fun embeddings(): Tensor = embeddings
@@ -33,11 +35,16 @@ public class Embedding(
     }
 }
 
-public fun embedding(inSize: Int, outSize: Int, vb: VarBuilder): Embedding {
-    val embeddings = vb.getWithHints(
-        Shape(inSize, outSize),
-        "weight",
-        Init.Randn(mean = 0.0, stdev = 1.0),
-    )
+public fun embedding(
+    inSize: Int,
+    outSize: Int,
+    vb: VarBuilder,
+): Embedding {
+    val embeddings =
+        vb.getWithHints(
+            Shape(inSize, outSize),
+            "weight",
+            Init.Randn(mean = 0.0, stdev = 1.0),
+        )
     return Embedding.new(embeddings, outSize)
 }

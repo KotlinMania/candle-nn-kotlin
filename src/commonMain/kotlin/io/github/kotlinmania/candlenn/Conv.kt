@@ -32,8 +32,11 @@ public class Conv1d(
     private val config: Conv1dConfig,
 ) : Module {
     public companion object {
-        public fun new(weight: Tensor, bias: Tensor?, config: Conv1dConfig): Conv1d =
-            Conv1d(weight, bias, config)
+        public fun new(
+            weight: Tensor,
+            bias: Tensor?,
+            config: Conv1dConfig,
+        ): Conv1d = Conv1d(weight, bias, config)
     }
 
     public fun config(): Conv1dConfig = config
@@ -44,24 +47,31 @@ public class Conv1d(
 
     override fun forward(xs: Tensor): Tensor {
         // The cudnn battle only works for matching channel/kernel sizes, handle the mismatch case here.
-        val x = if (xs.dim(2) == 1 && weight.dim(2) == 1 && config.stride == 1 && config.padding == 0 && config.dilation == 1 && config.groups == 1) {
-            val (bSize, cIn, _) = xs.dims3()
-            val cOut = weight.dim(0)
-            xs.reshape(Shape(bSize, cIn))
-                .matmul(weight.reshape(Shape(cOut, cIn)).t())
-                .reshape(Shape(bSize, cOut, 1))
-        } else {
-            xs.conv1dWithAlgo(
-                weight,
-                config.padding,
-                config.stride,
-                config.dilation,
-                config.groups,
-                config.cudnnFwdAlgo,
-            )
-        }
+        val x =
+            if (xs.dim(2) == 1 && weight.dim(2) == 1 && config.stride == 1 && config.padding == 0 && config.dilation == 1 &&
+                config.groups == 1
+            ) {
+                val (bSize, cIn, _) = xs.dims3()
+                val cOut = weight.dim(0)
+                xs
+                    .reshape(Shape(bSize, cIn))
+                    .matmul(weight.reshape(Shape(cOut, cIn)).t())
+                    .reshape(Shape(bSize, cOut, 1))
+            } else {
+                xs.conv1dWithAlgo(
+                    weight,
+                    config.padding,
+                    config.stride,
+                    config.dilation,
+                    config.groups,
+                    config.cudnnFwdAlgo,
+                )
+            }
         return when (bias) {
-            null -> x
+            null -> {
+                x
+            }
+
             else -> {
                 val b = bias.dims1()
                 val biasReshaped = bias.reshape(Shape(1, b, 1))
@@ -79,11 +89,12 @@ public fun conv1d(
     vb: VarBuilder,
 ): Conv1d {
     val initWs = DEFAULT_KAIMING_NORMAL
-    val ws = vb.getWithHints(
-        Shape(outChannels, inChannels / cfg.groups, kernelSize),
-        "weight",
-        initWs,
-    )
+    val ws =
+        vb.getWithHints(
+            Shape(outChannels, inChannels / cfg.groups, kernelSize),
+            "weight",
+            initWs,
+        )
     val bound = 1.0 / sqrt((inChannels / cfg.groups * kernelSize).toDouble())
     val initBs = Init.Uniform(-bound, bound)
     val bs = vb.getWithHints(outChannels, "bias", initBs)
@@ -98,11 +109,12 @@ public fun conv1dNoBias(
     vb: VarBuilder,
 ): Conv1d {
     val initWs = DEFAULT_KAIMING_NORMAL
-    val ws = vb.getWithHints(
-        Shape(outChannels, inChannels / cfg.groups, kernelSize),
-        "weight",
-        initWs,
-    )
+    val ws =
+        vb.getWithHints(
+            Shape(outChannels, inChannels / cfg.groups, kernelSize),
+            "weight",
+            initWs,
+        )
     return Conv1d.new(ws, null, cfg)
 }
 
@@ -141,16 +153,20 @@ public class ConvTranspose1d(
     public fun bias(): Tensor? = bias
 
     override fun forward(xs: Tensor): Tensor {
-        val x = xs.convTranspose1d(
-            weight,
-            config.padding,
-            config.outputPadding,
-            config.stride,
-            config.dilation,
-            config.groups,
-        )
+        val x =
+            xs.convTranspose1d(
+                weight,
+                config.padding,
+                config.outputPadding,
+                config.stride,
+                config.dilation,
+                config.groups,
+            )
         return when (bias) {
-            null -> x
+            null -> {
+                x
+            }
+
             else -> {
                 val b = bias.dims1()
                 val biasReshaped = bias.reshape(Shape(1, b, 1))
@@ -169,11 +185,12 @@ public fun convTranspose1d(
 ): ConvTranspose1d {
     val bound = 1.0 / sqrt((outChannels / cfg.groups * kernelSize).toDouble())
     val init = Init.Uniform(-bound, bound)
-    val ws = vb.getWithHints(
-        Shape(inChannels, outChannels / cfg.groups, kernelSize),
-        "weight",
-        init,
-    )
+    val ws =
+        vb.getWithHints(
+            Shape(inChannels, outChannels / cfg.groups, kernelSize),
+            "weight",
+            init,
+        )
     val bs = vb.getWithHints(outChannels, "bias", init)
     return ConvTranspose1d.new(ws, bs, cfg)
 }
@@ -187,11 +204,12 @@ public fun convTranspose1dNoBias(
 ): ConvTranspose1d {
     val bound = 1.0 / sqrt((outChannels / cfg.groups * kernelSize).toDouble())
     val initWs = Init.Uniform(-bound, bound)
-    val ws = vb.getWithHints(
-        Shape(inChannels, outChannels / cfg.groups, kernelSize),
-        "weight",
-        initWs,
-    )
+    val ws =
+        vb.getWithHints(
+            Shape(inChannels, outChannels / cfg.groups, kernelSize),
+            "weight",
+            initWs,
+        )
     return ConvTranspose1d.new(ws, null, cfg)
 }
 
@@ -216,8 +234,11 @@ public class Conv2d(
     private val config: Conv2dConfig,
 ) : Module {
     public companion object {
-        public fun new(weight: Tensor, bias: Tensor?, config: Conv2dConfig): Conv2d =
-            Conv2d(weight, bias, config)
+        public fun new(
+            weight: Tensor,
+            bias: Tensor?,
+            config: Conv2dConfig,
+        ): Conv2d = Conv2d(weight, bias, config)
     }
 
     public fun config(): Conv2dConfig = config
@@ -227,14 +248,17 @@ public class Conv2d(
     public fun bias(): Tensor? = bias
 
     public fun absorbBn(bn: BatchNorm): Conv2d {
-        val wb = bn.weightAndBias() ?: io.github.kotlinmania.candle.bail("batch norm does not have weight and bias")
+        val wb =
+            bn.weightAndBias() ?: io.github.kotlinmania.candle
+                .bail("batch norm does not have weight and bias")
         val (wBn, bBn) = wb
         val stdVal = wBn.div((bn.runningVar() + bn.eps()).sqrt())
         val newWeight = weight.broadcastMul(stdVal.reshape(Shape(weight.dims4().d0, 1, 1, 1)))
-        val newBias = when (bias) {
-            null -> bBn.sub(stdVal.mul(bn.runningMean()))
-            else -> bBn.add(stdVal.mul(bias.sub(bn.runningMean())))
-        }
+        val newBias =
+            when (bias) {
+                null -> bBn.sub(stdVal.mul(bn.runningMean()))
+                else -> bBn.add(stdVal.mul(bias.sub(bn.runningMean())))
+            }
         return Conv2d(
             weight = newWeight,
             bias = newBias,
@@ -243,16 +267,20 @@ public class Conv2d(
     }
 
     override fun forward(xs: Tensor): Tensor {
-        val x = xs.conv2dWithAlgo(
-            weight,
-            config.padding,
-            config.stride,
-            config.dilation,
-            config.groups,
-            config.cudnnFwdAlgo,
-        )
+        val x =
+            xs.conv2dWithAlgo(
+                weight,
+                config.padding,
+                config.stride,
+                config.dilation,
+                config.groups,
+                config.cudnnFwdAlgo,
+            )
         return when (bias) {
-            null -> x
+            null -> {
+                x
+            }
+
             else -> {
                 val b = bias.dims1()
                 val biasReshaped = bias.reshape(Shape(1, b, 1, 1))
@@ -270,11 +298,12 @@ public fun conv2d(
     vb: VarBuilder,
 ): Conv2d {
     val initWs = DEFAULT_KAIMING_NORMAL
-    val ws = vb.getWithHints(
-        Shape(outChannels, inChannels / cfg.groups, kernelSize, kernelSize),
-        "weight",
-        initWs,
-    )
+    val ws =
+        vb.getWithHints(
+            Shape(outChannels, inChannels / cfg.groups, kernelSize, kernelSize),
+            "weight",
+            initWs,
+        )
     val bound = 1.0 / sqrt((inChannels / cfg.groups * kernelSize * kernelSize).toDouble())
     val initBs = Init.Uniform(-bound, bound)
     val bs = vb.getWithHints(outChannels, "bias", initBs)
@@ -289,11 +318,12 @@ public fun conv2dNoBias(
     vb: VarBuilder,
 ): Conv2d {
     val initWs = DEFAULT_KAIMING_NORMAL
-    val ws = vb.getWithHints(
-        Shape(outChannels, inChannels / cfg.groups, kernelSize, kernelSize),
-        "weight",
-        initWs,
-    )
+    val ws =
+        vb.getWithHints(
+            Shape(outChannels, inChannels / cfg.groups, kernelSize, kernelSize),
+            "weight",
+            initWs,
+        )
     return Conv2d.new(ws, null, cfg)
 }
 
@@ -331,15 +361,19 @@ public class ConvTranspose2d(
     public fun bias(): Tensor? = bias
 
     override fun forward(xs: Tensor): Tensor {
-        val x = xs.convTranspose2d(
-            weight,
-            config.padding,
-            config.outputPadding,
-            config.stride,
-            config.dilation,
-        )
+        val x =
+            xs.convTranspose2d(
+                weight,
+                config.padding,
+                config.outputPadding,
+                config.stride,
+                config.dilation,
+            )
         return when (bias) {
-            null -> x
+            null -> {
+                x
+            }
+
             else -> {
                 val b = bias.dims1()
                 val biasReshaped = bias.reshape(Shape(1, b, 1, 1))
@@ -358,11 +392,12 @@ public fun convTranspose2d(
 ): ConvTranspose2d {
     val bound = 1.0 / sqrt((outChannels * kernelSize * kernelSize).toDouble())
     val init = Init.Uniform(-bound, bound)
-    val ws = vb.getWithHints(
-        Shape(inChannels, outChannels, kernelSize, kernelSize),
-        "weight",
-        init,
-    )
+    val ws =
+        vb.getWithHints(
+            Shape(inChannels, outChannels, kernelSize, kernelSize),
+            "weight",
+            init,
+        )
     val bs = vb.getWithHints(outChannels, "bias", init)
     return ConvTranspose2d.new(ws, bs, cfg)
 }
@@ -376,10 +411,11 @@ public fun convTranspose2dNoBias(
 ): ConvTranspose2d {
     val bound = 1.0 / sqrt((outChannels * kernelSize * kernelSize).toDouble())
     val initWs = Init.Uniform(-bound, bound)
-    val ws = vb.getWithHints(
-        Shape(inChannels, outChannels, kernelSize, kernelSize),
-        "weight",
-        initWs,
-    )
+    val ws =
+        vb.getWithHints(
+            Shape(inChannels, outChannels, kernelSize, kernelSize),
+            "weight",
+            initWs,
+        )
     return ConvTranspose2d.new(ws, null, cfg)
 }

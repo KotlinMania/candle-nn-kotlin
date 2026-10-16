@@ -27,11 +27,9 @@ public class AttnMask private constructor(
     public companion object {
         public val None: AttnMask = AttnMask(AttnMaskKind.None)
 
-        public fun Causal(kvOffset: Int = 0): AttnMask =
-            AttnMask(AttnMaskKind.Causal, causalKvOffset = kvOffset)
+        public fun Causal(kvOffset: Int = 0): AttnMask = AttnMask(AttnMaskKind.Causal, causalKvOffset = kvOffset)
 
-        public fun Mask(tensor: Tensor): AttnMask =
-            AttnMask(AttnMaskKind.Mask, maskTensor = tensor)
+        public fun Mask(tensor: Tensor): AttnMask = AttnMask(AttnMaskKind.Mask, maskTensor = tensor)
 
         public fun causal(): AttnMask = Causal(0)
 

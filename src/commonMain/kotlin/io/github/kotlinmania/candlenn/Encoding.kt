@@ -13,12 +13,19 @@ private fun extractLongIndices(indices: Tensor): LongArray {
             val vals = flat.toVec1<Double>()
             LongArray(vals.size) { vals[it].toLong() and 0xFFL }
         }
+
         DType.U32 -> {
             val vals = flat.toVec1<Double>()
             LongArray(vals.size) { vals[it].toLong() and 0xFFFFFFFFL }
         }
-        DType.I64 -> flat.toVec1I64()
-        else -> bail("one-hot: unsupported data type $dtype, expected U8, U32, or I64")
+
+        DType.I64 -> {
+            flat.toVec1I64()
+        }
+
+        else -> {
+            bail("one-hot: unsupported data type $dtype, expected U8, U32, or I64")
+        }
     }
 }
 

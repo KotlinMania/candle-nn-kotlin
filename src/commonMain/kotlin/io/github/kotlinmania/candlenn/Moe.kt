@@ -15,7 +15,9 @@ public fun moeGemm(
     topk: Int,
     isPrefill: Boolean,
 ): Tensor {
-    if (topk <= 0 || (isPrefill && input.rank() == 0) || weights.rank() == 0 || sortedTokenIds.rank() == 0 || expertsIds.rank() == 0 || topkWeights?.rank() == 0) {
+    if (topk <= 0 || (isPrefill && input.rank() == 0) || weights.rank() == 0 || sortedTokenIds.rank() == 0 || expertsIds.rank() == 0 ||
+        topkWeights?.rank() == 0
+    ) {
         bail("invalid moeGemm arguments")
     }
     bail("moeGemm is only implemented for the cuda backend")
@@ -31,7 +33,10 @@ public fun moeGemmGguf(
     isPrefill: Boolean,
     dtype: DType,
 ): Tensor {
-    if (topk <= 0 || (isPrefill && input.rank() == 0) || weights.rank() == 0 || sortedTokenIds.rank() == 0 || expertsIds.rank() == 0 || topkWeights?.rank() == 0 || dtype.sizeInBytes() == 0) {
+    if (topk <= 0 || (isPrefill && input.rank() == 0) || weights.rank() == 0 || sortedTokenIds.rank() == 0 || expertsIds.rank() == 0 ||
+        topkWeights?.rank() == 0 ||
+        dtype.sizeInBytes() == 0
+    ) {
         bail("invalid moeGemmGguf arguments")
     }
     bail("moeGemmGguf is only implemented for the cuda backend")

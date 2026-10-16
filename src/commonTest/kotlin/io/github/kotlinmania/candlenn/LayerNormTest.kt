@@ -20,11 +20,12 @@ class LayerNormTest {
         val w = Tensor.new(floatArrayOf(3.0f), Shape(1), device)
         val b = Tensor.new(floatArrayOf(0.5f), Shape(1), device)
         val ln2 = LayerNorm.new(Tensor.cat(listOf(w, w), 0), Tensor.cat(listOf(b, b), 0), 1e-8)
-        val ln3 = LayerNorm.new(
-            Tensor.cat(listOf(w, w, w), 0),
-            Tensor.cat(listOf(b, b, b), 0),
-            1e-8,
-        )
+        val ln3 =
+            LayerNorm.new(
+                Tensor.cat(listOf(w, w, w), 0),
+                Tensor.cat(listOf(b, b, b), 0),
+                1e-8,
+            )
         val ln = LayerNorm.new(w, b, 1e-8)
         assertEquals(1e-8, ln.eps())
         assertTrue(ln.removeMean())
@@ -37,15 +38,22 @@ class LayerNormTest {
         val res2 = ln2.forward(inp2)
         assertEquals(listOf(listOf(listOf(3.5f, -2.5f))), res2.toVec3<Float>())
 
-        val inp3 = Tensor.new(
-            floatArrayOf(
-                1.0f, 2.0f, 3.0f,
-                4.0f, 5.0f, 6.0f,
-                9.0f, 8.0f, 7.0f,
-            ),
-            Shape(1, 3, 3),
-            device,
-        )
+        val inp3 =
+            Tensor.new(
+                floatArrayOf(
+                    1.0f,
+                    2.0f,
+                    3.0f,
+                    4.0f,
+                    5.0f,
+                    6.0f,
+                    9.0f,
+                    8.0f,
+                    7.0f,
+                ),
+                Shape(1, 3, 3),
+                device,
+            )
         val res3 = ln3.forward(inp3)
         assertEquals(
             listOf(
@@ -62,7 +70,13 @@ class LayerNormTest {
             listOf(listOf(listOf(0.5f), listOf(0.5f), listOf(0.5f))),
             toVec3Round(mean, 4),
         )
-        val std = res3.broadcastSub(mean).sqr().sumKeepdim(2).sqrt().div(3.0)
+        val std =
+            res3
+                .broadcastSub(mean)
+                .sqr()
+                .sumKeepdim(2)
+                .sqrt()
+                .div(3.0)
         assertEquals(
             listOf(listOf(listOf(1.7321f), listOf(1.7321f), listOf(1.7321f))),
             toVec3Round(std, 4),
@@ -103,10 +117,11 @@ class LayerNormTest {
         val device = Device.Cpu
         val gamma = Tensor.new(floatArrayOf(1.0f, 1.0f, 1.0f, 1.0f), Shape(4), device)
         val beta = Tensor.new(floatArrayOf(0.0f, 0.0f, 0.0f, 0.0f), Shape(4), device)
-        val tensors = mapOf(
-            "ln.gamma" to gamma,
-            "ln.beta" to beta,
-        )
+        val tensors =
+            mapOf(
+                "ln.gamma" to gamma,
+                "ln.beta" to beta,
+            )
         val vb = VarBuilder.fromTensors(tensors, DType.F32, device)
         val ln = layerNorm(4, LayerNormConfig.fromEps(1e-5), vb.pp("ln"))
         assertEquals(listOf(4), ln.weight().dims())

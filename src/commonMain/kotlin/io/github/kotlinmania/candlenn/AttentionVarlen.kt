@@ -41,23 +41,26 @@ public fun flashAttnVarlenUnfused(
     val (_, numHeads, headDim) = q.dims3()
     val (totalK, numKvHeads, _) = k.dims3()
 
-    val (kExpanded, vExpanded) = if (numHeads != numKvHeads) {
-        if (numHeads % numKvHeads != 0) {
-            bail("Invalid GQA config: numHeads=$numHeads not divisible by numKvHeads=$numKvHeads")
+    val (kExpanded, vExpanded) =
+        if (numHeads != numKvHeads) {
+            if (numHeads % numKvHeads != 0) {
+                bail("Invalid GQA config: numHeads=$numHeads not divisible by numKvHeads=$numKvHeads")
+            }
+            val repeatFactor = numHeads / numKvHeads
+            val kRep =
+                k
+                    .reshape(Shape.fromDims(totalK, numKvHeads, 1, headDim))
+                    .broadcastAs(Shape.fromDims(totalK, numKvHeads, repeatFactor, headDim))
+                    .reshape(totalK, numHeads, headDim)
+            val vRep =
+                v
+                    .reshape(Shape.fromDims(totalK, numKvHeads, 1, headDim))
+                    .broadcastAs(Shape.fromDims(totalK, numKvHeads, repeatFactor, headDim))
+                    .reshape(totalK, numHeads, headDim)
+            Pair(kRep, vRep)
+        } else {
+            Pair(k, v)
         }
-        val repeatFactor = numHeads / numKvHeads
-        val kRep = k
-            .reshape(Shape.fromDims(totalK, numKvHeads, 1, headDim))
-            .broadcastAs(Shape.fromDims(totalK, numKvHeads, repeatFactor, headDim))
-            .reshape(totalK, numHeads, headDim)
-        val vRep = v
-            .reshape(Shape.fromDims(totalK, numKvHeads, 1, headDim))
-            .broadcastAs(Shape.fromDims(totalK, numKvHeads, repeatFactor, headDim))
-            .reshape(totalK, numHeads, headDim)
-        Pair(kRep, vRep)
-    } else {
-        Pair(k, v)
-    }
 
     val batchSize = seqlensQ.dims()[0]
     val outputs = ArrayList<Tensor>()
@@ -97,32 +100,35 @@ public fun flashAttnVarlenUnfused(
         attentionScores = attentionScores.mul(scaleTensor.broadcastAs(attentionScores.shape()))
 
         if (causal) {
-            val causalMask = createCausalMaskBatch(seqLenQ, seqLenK, numHeads, device)
-                .toDtype(attentionScores.dtype())
+            val causalMask =
+                createCausalMaskBatch(seqLenQ, seqLenK, numHeads, device)
+                    .toDtype(attentionScores.dtype())
             attentionScores = attentionScores.add(causalMask)
         }
 
         if (windowSizeLeft != null || windowSizeRight != null) {
-            val windowMask = createWindowMaskBatch(
-                seqLenQ,
-                seqLenK,
-                numHeads,
-                windowSizeLeft,
-                windowSizeRight,
-                device,
-            ).toDtype(attentionScores.dtype())
+            val windowMask =
+                createWindowMaskBatch(
+                    seqLenQ,
+                    seqLenK,
+                    numHeads,
+                    windowSizeLeft,
+                    windowSizeRight,
+                    device,
+                ).toDtype(attentionScores.dtype())
             attentionScores = attentionScores.add(windowMask)
         }
 
         if (alibiSlopes != null) {
-            val alibiBias = createAlibiBiasBatch(
-                seqLenQ,
-                seqLenK,
-                numHeads,
-                alibiSlopes,
-                causal,
-                device,
-            ).toDtype(attentionScores.dtype())
+            val alibiBias =
+                createAlibiBiasBatch(
+                    seqLenQ,
+                    seqLenK,
+                    numHeads,
+                    alibiSlopes,
+                    causal,
+                    device,
+                ).toDtype(attentionScores.dtype())
             attentionScores = attentionScores.add(alibiBias)
         }
 
@@ -232,11 +238,12 @@ private fun createAlibiBiasBatch(
         for (i in 0 until seqLenQ) {
             val iK = i + offset
             for (j in 0 until seqLenK) {
-                val dist = if (causal) {
-                    max(iK - j, 0).toFloat()
-                } else {
-                    abs(j - iK).toFloat()
-                }
+                val dist =
+                    if (causal) {
+                        max(iK - j, 0).toFloat()
+                    } else {
+                        abs(j - iK).toFloat()
+                    }
                 bias.add(-slope * dist)
             }
         }
