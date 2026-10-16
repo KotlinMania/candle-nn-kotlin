@@ -78,7 +78,7 @@ public fun routedGroupedMatmul(
     inputMode: MoeInputMode,
     routeWeights: Tensor? = null,
 ): Tensor {
-    if (input.rank() == 0 || expertWeights.rank() == 0 || routing.numExperts <= 0 || inputMode.name.isEmpty() || routeWeights?.rank() == 0) {
+    if (input.rank() == 0 || expertWeights.rank() == 0 || routing.numExperts() <= 0 || inputMode.name.isEmpty() || routeWeights?.rank() == 0) {
         bail("invalid routedGroupedMatmul arguments")
     }
     bail("cuTile routed grouped matmul requires CUDA backend")
@@ -91,7 +91,7 @@ public fun warmupRoutedGroupedMatmul(
     inputMode: MoeInputMode,
     routeWeights: Tensor? = null,
 ) {
-    if (input.rank() == 0 || expertWeights.rank() == 0 || routing.numExperts <= 0 || inputMode.name.isEmpty() || routeWeights?.rank() == 0) {
+    if (input.rank() == 0 || expertWeights.rank() == 0 || routing.numExperts() <= 0 || inputMode.name.isEmpty() || routeWeights?.rank() == 0) {
         bail("invalid warmupRoutedGroupedMatmul arguments")
     }
     bail("cuTile routed grouped matmul requires CUDA backend")

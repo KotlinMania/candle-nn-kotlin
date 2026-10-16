@@ -12,6 +12,7 @@ import io.github.kotlinmania.candle.SafeTensors
 import io.github.kotlinmania.candle.Shape
 import io.github.kotlinmania.candle.SliceSafetensors
 import io.github.kotlinmania.candle.Tensor
+import io.github.kotlinmania.candle.bail
 import io.github.kotlinmania.candle.tryFrom
 
 /**
