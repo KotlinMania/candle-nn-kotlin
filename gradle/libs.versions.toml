@@ -17,6 +17,8 @@ numTraits = "0.2.15"
 rayon = "1.7.0"
 safetensors = "0.8.0"
 libc = "0.1.9"
+serde = "0.1.11"
+serdeJson = "0.1.1"
 rand = "0.1.0"
 randDistr = "0.5.1"
 anyhow = "0.1.1"
@@ -47,6 +49,8 @@ num-traits-kotlin = { module = "io.github.kotlinmania:num-traits-kotlin", versio
 rayon-kotlin = { module = "io.github.kotlinmania:rayon-kotlin", version.ref = "rayon" }
 safetensors-kotlin = { module = "io.github.kotlinmania:safetensors-kotlin", version.ref = "safetensors" }
 libc-kotlin = { module = "io.github.kotlinmania:libc-kotlin", version.ref = "libc" }
+serde-kotlin = { module = "io.github.kotlinmania:serde-kotlin", version.ref = "serde" }
+serde-json-kotlin = { module = "io.github.kotlinmania:serde-json-kotlin", version.ref = "serdeJson" }
 rand-kotlin = { module = "io.github.kotlinmania:rand-kotlin", version.ref = "rand" }
 rand-distr-kotlin = { module = "io.github.kotlinmania:rand-distr-kotlin", version.ref = "randDistr" }
 anyhow-kotlin = { module = "io.github.kotlinmania:anyhow-kotlin", version.ref = "anyhow" }
@@ -55,8 +59,6 @@ clap-kotlin = { module = "io.github.kotlinmania:clap-kotlin", version.ref = "cla
 [bundles]
 candlenn-commonMain = [
   "kotlinx-coroutines-core",
-  "kotlinx-serialization-core",
-  "kotlinx-serialization-json",
   "kotlinx-datetime",
   "collections-immutable",
   "candle-kotlin",
@@ -67,9 +69,11 @@ candlenn-commonMain = [
   "rayon-kotlin",
   "safetensors-kotlin",
   "libc-kotlin",
+  "serde-kotlin",
 ]
 candlenn-commonTest = [
   "kotlinx-coroutines-test",
+  "serde-json-kotlin",
   "rand-kotlin",
   "rand-distr-kotlin",
   "anyhow-kotlin",

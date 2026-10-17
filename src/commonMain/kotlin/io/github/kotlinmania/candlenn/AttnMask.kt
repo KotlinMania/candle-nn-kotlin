@@ -1,4 +1,3 @@
-// port-lint: source attention/mod.rs
 package io.github.kotlinmania.candlenn
 
 import io.github.kotlinmania.candle.Tensor

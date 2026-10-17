@@ -6,6 +6,8 @@ import io.github.kotlinmania.candle.Device
 import io.github.kotlinmania.candle.Shape
 import io.github.kotlinmania.candle.Tensor
 import io.github.kotlinmania.candle.toVec3Round
+import io.github.kotlinmania.serdejson.fromStr
+import io.github.kotlinmania.serdejson.toStr
 import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.sin
@@ -340,5 +342,18 @@ class OpsTest {
                 .sumAll()
                 .toVec0<Float>()
         assertTrue(diff < 1e-5f)
+    }
+
+    @Test
+    fun activationSerdeRoundtrip() {
+        val geluJson = toStr(Activation.Gelu).getOrThrow()
+        assertEquals("\"gelu\"", geluJson)
+        assertEquals(Activation.Gelu, fromStr(geluJson, Activation.Companion).getOrThrow())
+        assertEquals(Activation.NewGelu, fromStr("\"gelu_new\"", Activation.Companion).getOrThrow())
+        assertEquals(Activation.Mish, fromStr("\"mish\"", Activation.Companion).getOrThrow())
+
+        val elu = Activation.Elu(0.25)
+        val eluJson = toStr(elu).getOrThrow()
+        assertEquals(elu, fromStr(eluJson, Activation.Companion).getOrThrow())
     }
 }
