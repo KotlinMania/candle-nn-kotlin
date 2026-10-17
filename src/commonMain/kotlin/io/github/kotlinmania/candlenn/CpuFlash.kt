@@ -1,4 +1,3 @@
-// port-lint: source attention/cpu_flash/mod.rs
 package io.github.kotlinmania.candlenn
 
 import io.github.kotlinmania.candle.CpuStorage

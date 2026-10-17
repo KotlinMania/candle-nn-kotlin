@@ -138,6 +138,12 @@ val intellijCoroutinesVersion =
 // dependency population, so keep the default embeddable runner explicit too.
 val projectDependencyHandler = project.dependencies
 configurations.configureEach {
+    // proc-macro-kotlin's published Android artifact bundles the JetBrains
+    // annotation classes, which duplicate org.jetbrains:annotations on the
+    // Android device-test classpath.
+    if (name.contains("androidDeviceTest", ignoreCase = true)) {
+        exclude(group = "org.jetbrains", module = "annotations")
+    }
     if (name == "swiftExportClasspath") {
         dependencies.add(projectDependencyHandler.create("org.jetbrains.kotlin:swift-export-embeddable:$kotlinVersion"))
         dependencies.add(
@@ -1435,19 +1441,27 @@ if (napiFfiEnabled) {
 
     val copyNodeFfi =
         tasks.register<Copy>("copyNode$ffiName") {
-            dependsOn(buildNodeFfi)
+            dependsOn(buildNodeFfi, "kotlinNpmInstall")
             from(ffiNapiDir)
             into(layout.buildDirectory.dir("js/node_modules/$ffiNpmPackage"))
+            outputs.upToDateWhen { File(destinationDir, "package.json").exists() }
         }
     val copyWasmNodeFfi =
         tasks.register<Copy>("copyWasmNode$ffiName") {
-            dependsOn(buildNodeFfi)
+            dependsOn(buildNodeFfi, "kotlinWasmNpmInstall")
             from(ffiNapiDir)
             into(layout.buildDirectory.dir("wasm/node_modules/$ffiNpmPackage"))
+            outputs.upToDateWhen { File(destinationDir, "package.json").exists() }
         }
-    tasks.matching { it.name.startsWith("jsNodeTest") || it.name.startsWith("wasmJsNodeTest") }.configureEach {
-        dependsOn(copyNodeFfi, copyWasmNodeFfi)
-    }
+    tasks
+        .matching {
+            it.name.startsWith("jsNodeTest") ||
+                it.name.startsWith("jsBrowserTest") ||
+                it.name.startsWith("wasmJsNodeTest") ||
+                it.name.startsWith("wasmJsBrowserTest")
+        }.configureEach {
+            dependsOn(copyNodeFfi, copyWasmNodeFfi)
+        }
 }
 
 // Propagate JNI and N-API native bindings from composite includedBuilds
@@ -1484,22 +1498,25 @@ gradle.includedBuilds.forEach { ib ->
         if (ibNapiFfi) {
             val copyIbNode =
                 tasks.register<Copy>("copyIncludedNode$ibFfiName") {
-                    dependsOn(ib.task(":buildNode$ibFfiName"))
+                    dependsOn(ib.task(":buildNode$ibFfiName"), "kotlinNpmInstall")
                     from(File(ib.projectDir, "native/node-$ibFfiLower"))
                     into(layout.buildDirectory.dir("js/node_modules/@kotlinmania/$ibFfiLower-native-bindings"))
+                    outputs.upToDateWhen { File(destinationDir, "package.json").exists() }
                 }
             val copyIbWasmNode =
                 tasks.register<Copy>("copyIncludedWasmNode$ibFfiName") {
-                    dependsOn(ib.task(":buildNode$ibFfiName"))
+                    dependsOn(ib.task(":buildNode$ibFfiName"), "kotlinWasmNpmInstall")
                     from(File(ib.projectDir, "native/node-$ibFfiLower"))
                     into(layout.buildDirectory.dir("wasm/node_modules/@kotlinmania/$ibFfiLower-native-bindings"))
+                    outputs.upToDateWhen { File(destinationDir, "package.json").exists() }
                 }
             tasks
                 .matching {
                     it.name.startsWith("jsNodeTest") ||
                         it.name.startsWith("jsBrowserTest") ||
                         it.name.startsWith("wasmJsNodeTest") ||
-                        it.name.startsWith("wasmJsBrowserTest")
+                        it.name.startsWith("wasmJsBrowserTest") ||
+                        it.name.contains("Webpack")
                 }.configureEach {
                     dependsOn(copyIbNode, copyIbWasmNode)
                 }

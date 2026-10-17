@@ -4,6 +4,21 @@ package io.github.kotlinmania.candlenn
 import io.github.kotlinmania.candle.Module
 import io.github.kotlinmania.candle.Shape
 import io.github.kotlinmania.candle.Tensor
+import io.github.kotlinmania.serde.SerdeError
+import io.github.kotlinmania.serde.SerdeException
+import io.github.kotlinmania.serde.SerdeResult
+import io.github.kotlinmania.serde.serdeCatching
+import io.github.kotlinmania.serdecore.de.Deserialize
+import io.github.kotlinmania.serdecore.de.DeserializeSeed
+import io.github.kotlinmania.serdecore.de.Deserializer
+import io.github.kotlinmania.serdecore.de.EnumAccess
+import io.github.kotlinmania.serdecore.de.F64Deserialize
+import io.github.kotlinmania.serdecore.de.MapAccess
+import io.github.kotlinmania.serdecore.de.StringDeserialize
+import io.github.kotlinmania.serdecore.de.Visitor
+import io.github.kotlinmania.serdecore.ser.Serialize
+import io.github.kotlinmania.serdecore.ser.Serializer
+import io.github.kotlinmania.serdecore.ser.serialize
 import kotlin.math.PI
 import kotlin.math.sqrt
 
@@ -18,17 +33,53 @@ public enum class ActivationKind {
     HardSigmoid,
     Swiglu,
     Swish,
+    Mish,
     HardSwish,
     Elu,
     LeakyRelu,
     GeluPytorchTanh,
 }
 
+private class DoubleSerialize(
+    private val value: Double,
+) : Serialize {
+    override fun <Ok> serialize(serializer: Serializer<Ok>): SerdeResult<Ok> = value.serialize(serializer)
+}
+
+private class SeedOf<T>(
+    private val deserialize: Deserialize<T>,
+) : DeserializeSeed<T> {
+    override fun <D> deserialize(deserializer: D): SerdeResult<T>
+        where D : Deserializer = deserialize.deserialize(deserializer)
+}
+
+private val ACTIVATION_VARIANTS: List<String> =
+    listOf(
+        "gelu",
+        "newgelu",
+        "gelu_new",
+        "relu",
+        "relu2",
+        "relu6",
+        "silu",
+        "sigmoid",
+        "hardsigmoid",
+        "swiglu",
+        "swish",
+        "mish",
+        "hardswish",
+        "elu",
+        "leakyrelu",
+        "gelupytorchtanh",
+        "gelu_pytorch_tanh",
+    )
+
 public class Activation(
     public val kind: ActivationKind = ActivationKind.Gelu,
     public val param: Double = 0.0,
-) : Module {
-    public companion object {
+) : Module,
+    Serialize {
+    public companion object : Deserialize<Activation> {
         public val Gelu: Activation = Activation(ActivationKind.Gelu)
         public val NewGelu: Activation = Activation(ActivationKind.NewGelu)
         public val Relu: Activation = Activation(ActivationKind.Relu)
@@ -39,6 +90,7 @@ public class Activation(
         public val HardSigmoid: Activation = Activation(ActivationKind.HardSigmoid)
         public val Swiglu: Activation = Activation(ActivationKind.Swiglu)
         public val Swish: Activation = Activation(ActivationKind.Swish)
+        public val Mish: Activation = Activation(ActivationKind.Mish)
         public val HardSwish: Activation = Activation(ActivationKind.HardSwish)
         public val GeluPytorchTanh: Activation = Activation(ActivationKind.GeluPytorchTanh)
 
@@ -47,7 +99,113 @@ public class Activation(
         public fun LeakyRelu(negativeSlope: Double): Activation = Activation(ActivationKind.LeakyRelu, negativeSlope)
 
         public fun default(): Activation = Gelu
+
+        private fun unitActivationFromName(name: String): Activation? =
+            when (name) {
+                "gelu" -> Gelu
+                "newgelu", "gelu_new" -> NewGelu
+                "relu" -> Relu
+                "relu2" -> Relu2
+                "relu6" -> Relu6
+                "silu" -> Silu
+                "sigmoid" -> Sigmoid
+                "hardsigmoid" -> HardSigmoid
+                "swiglu" -> Swiglu
+                "swish" -> Swish
+                "mish" -> Mish
+                "hardswish" -> HardSwish
+                "gelupytorchtanh", "gelu_pytorch_tanh" -> GeluPytorchTanh
+                else -> null
+            }
+
+        override fun <D> deserialize(deserializer: D): SerdeResult<Activation>
+            where D : Deserializer =
+            deserializer.deserializeEnum(
+                "Activation",
+                ACTIVATION_VARIANTS,
+                object : Visitor<Activation> {
+                    override fun expecting(): String = "enum Activation"
+
+                    override fun visitStr(v: String): SerdeResult<Activation> =
+                        unitActivationFromName(v)?.let { SerdeResult.success(it) }
+                            ?: SerdeResult.failure(SerdeError.unknownVariant(v, ACTIVATION_VARIANTS))
+
+                    override fun visitString(v: String): SerdeResult<Activation> = visitStr(v)
+
+                    override fun <A> visitMap(access: A): SerdeResult<Activation>
+                        where A : MapAccess =
+                        serdeCatching {
+                            val key =
+                                access.nextKeySeed(SeedOf(StringDeserialize)).getOrThrow()
+                                    ?: throw SerdeException(SerdeError.custom("expected variant map"))
+                            val result =
+                                when (key) {
+                                    "elu" -> {
+                                        Elu(access.nextValueSeed(SeedOf(F64Deserialize)).getOrThrow())
+                                    }
+
+                                    "leakyrelu" -> {
+                                        LeakyRelu(access.nextValueSeed(SeedOf(F64Deserialize)).getOrThrow())
+                                    }
+
+                                    else -> {
+                                        val unitAct =
+                                            unitActivationFromName(key)
+                                                ?: throw SerdeException(SerdeError.unknownVariant(key, ACTIVATION_VARIANTS))
+                                        access.nextValueSeed(SeedOf(io.github.kotlinmania.serdecore.de.UnitDeserialize)).getOrThrow()
+                                        unitAct
+                                    }
+                                }
+                            if (access.nextKeySeed(SeedOf(StringDeserialize)).getOrThrow() != null) {
+                                throw SerdeException(SerdeError.custom("unexpected extra key in enum map"))
+                            }
+                            result
+                        }
+
+                    override fun <A> visitEnum(access: A): SerdeResult<Activation>
+                        where A : EnumAccess =
+                        serdeCatching {
+                            val (variantName, variant) = access.variantSeed(SeedOf(StringDeserialize)).getOrThrow()
+                            when (variantName) {
+                                "elu" -> {
+                                    Elu(variant.newtypeVariant(SeedOf(F64Deserialize)).getOrThrow())
+                                }
+
+                                "leakyrelu" -> {
+                                    LeakyRelu(variant.newtypeVariant(SeedOf(F64Deserialize)).getOrThrow())
+                                }
+
+                                else -> {
+                                    val unitAct =
+                                        unitActivationFromName(variantName)
+                                            ?: throw SerdeException(SerdeError.unknownVariant(variantName, ACTIVATION_VARIANTS))
+                                    variant.unitVariant().getOrThrow()
+                                    unitAct
+                                }
+                            }
+                        }
+                },
+            )
     }
+
+    override fun <Ok> serialize(serializer: Serializer<Ok>): SerdeResult<Ok> =
+        when (kind) {
+            ActivationKind.Gelu -> serializer.serializeUnitVariant("Activation", 0u, "gelu")
+            ActivationKind.NewGelu -> serializer.serializeUnitVariant("Activation", 1u, "newgelu")
+            ActivationKind.Relu -> serializer.serializeUnitVariant("Activation", 2u, "relu")
+            ActivationKind.Relu2 -> serializer.serializeUnitVariant("Activation", 3u, "relu2")
+            ActivationKind.Relu6 -> serializer.serializeUnitVariant("Activation", 4u, "relu6")
+            ActivationKind.Silu -> serializer.serializeUnitVariant("Activation", 5u, "silu")
+            ActivationKind.Sigmoid -> serializer.serializeUnitVariant("Activation", 6u, "sigmoid")
+            ActivationKind.HardSigmoid -> serializer.serializeUnitVariant("Activation", 7u, "hardsigmoid")
+            ActivationKind.Swiglu -> serializer.serializeUnitVariant("Activation", 8u, "swiglu")
+            ActivationKind.Swish -> serializer.serializeUnitVariant("Activation", 9u, "swish")
+            ActivationKind.Mish -> serializer.serializeUnitVariant("Activation", 10u, "mish")
+            ActivationKind.HardSwish -> serializer.serializeUnitVariant("Activation", 11u, "hardswish")
+            ActivationKind.Elu -> serializer.serializeNewtypeVariant("Activation", 12u, "elu", DoubleSerialize(param))
+            ActivationKind.LeakyRelu -> serializer.serializeNewtypeVariant("Activation", 13u, "leakyrelu", DoubleSerialize(param))
+            ActivationKind.GeluPytorchTanh -> serializer.serializeUnitVariant("Activation", 14u, "gelupytorchtanh")
+        }
 
     override fun forward(xs: Tensor): Tensor =
         when (kind) {
@@ -98,6 +256,10 @@ public class Activation(
                 xs * hardSigmoid(xs)
             }
 
+            ActivationKind.Mish -> {
+                mish(xs)
+            }
+
             ActivationKind.Elu -> {
                 xs.elu(param)
             }
@@ -138,6 +300,8 @@ public class PReLU(
         val weight =
             if (isScalar) {
                 weight.reshape(Shape(emptyList()))
+            } else if (xs.shape() == weight.shape()) {
+                weight
             } else if (xs.rank() >= 2) {
                 val numChannels = xs.dim(1)
                 val numWeights = weight.elemCount()
