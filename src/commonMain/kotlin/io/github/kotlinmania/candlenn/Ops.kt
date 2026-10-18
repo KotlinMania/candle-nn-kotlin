@@ -13,7 +13,7 @@ import io.github.kotlinmania.candle.Map1
 import io.github.kotlinmania.candle.Module
 import io.github.kotlinmania.candle.ModuleT
 import io.github.kotlinmania.candle.Shape
-import io.github.kotlinmania.candle.ShapeDim
+
 import io.github.kotlinmania.candle.Tensor
 import io.github.kotlinmania.candle.applyOp1
 import io.github.kotlinmania.candle.applyOp1NoBwd
@@ -47,7 +47,7 @@ public fun softmax(
  */
 public fun softmax(
     xs: Tensor,
-    dim: ShapeDim,
+    dim: io.github.kotlinmania.candle.Dim,
 ): Tensor = softmax(xs, dim.toIndex(xs.shape(), "softmax"))
 
 public fun logSoftmax(
@@ -64,7 +64,7 @@ public fun logSoftmax(
 
 public fun logSoftmax(
     xs: Tensor,
-    dim: ShapeDim,
+    dim: io.github.kotlinmania.candle.Dim,
 ): Tensor = logSoftmax(xs, dim.toIndex(xs.shape(), "log-softmax"))
 
 public fun silu(xs: Tensor): Tensor = xs.silu()
@@ -102,7 +102,7 @@ internal class Sigmoid :
     }
 }
 
-internal fun Tensor.sumKeepdim(dim: ShapeDim): Tensor = sumKeepdim(dim.toIndex(shape(), "sum-keepdim"))
+internal fun Tensor.sumKeepdim(dim: io.github.kotlinmania.candle.Dim): Tensor = sumKeepdim(dim.toIndex(shape(), "sum-keepdim"))
 
 internal operator fun Tensor.plus(rhs: Double): Tensor = add(rhs)
 
