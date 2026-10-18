@@ -15,18 +15,10 @@ let package = Package(
             dependencies: [
                 .product(name: "CandleNnLibrary", package: "CandleNn")
             ],
-            swiftSettings: [
-                .unsafeFlags([
-                    "-F", "/Library/Developer/CommandLineTools/Library/Developer/Frameworks",
-                ]),
-            ],
             linkerSettings: [
                 .unsafeFlags([
                     "-L", "../build/swift-test",
                     "-lCandleNn",
-                    "-F", "/Library/Developer/CommandLineTools/Library/Developer/Frameworks",
-                    "-Xlinker", "-rpath", "-Xlinker", "/Library/Developer/CommandLineTools/Library/Developer/Frameworks",
-                    "-Xlinker", "-rpath", "-Xlinker", "/Library/Developer/CommandLineTools/Library/Developer/usr/lib",
                 ]),
             ]
         ),
