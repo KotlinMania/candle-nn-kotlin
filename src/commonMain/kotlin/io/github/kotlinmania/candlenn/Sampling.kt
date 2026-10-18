@@ -2,9 +2,9 @@
 package io.github.kotlinmania.candlenn
 
 import io.github.kotlinmania.candle.DType
+import io.github.kotlinmania.candle.Dim
 import io.github.kotlinmania.candle.Shape
 import io.github.kotlinmania.candle.Tensor
-import io.github.kotlinmania.candle.toIndex
 
 /**
  * Sample according to the Gumbel-Softmax distribution.
@@ -40,5 +40,5 @@ public fun gumbelSoftmax(
 public fun gumbelSoftmax(
     logits: Tensor,
     temperature: Double,
-    dim: io.github.kotlinmania.candle.Dim,
+    dim: Dim,
 ): Tensor = gumbelSoftmax(logits, temperature, dim.toIndex(logits.shape(), "gumbel-softmax"))
