@@ -13,7 +13,6 @@ import io.github.kotlinmania.candle.Map1
 import io.github.kotlinmania.candle.Module
 import io.github.kotlinmania.candle.ModuleT
 import io.github.kotlinmania.candle.Shape
-
 import io.github.kotlinmania.candle.Tensor
 import io.github.kotlinmania.candle.applyOp1
 import io.github.kotlinmania.candle.applyOp1NoBwd
