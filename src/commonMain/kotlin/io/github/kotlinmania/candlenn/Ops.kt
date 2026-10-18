@@ -12,8 +12,8 @@ import io.github.kotlinmania.candle.Layout
 import io.github.kotlinmania.candle.Map1
 import io.github.kotlinmania.candle.Module
 import io.github.kotlinmania.candle.ModuleT
+import io.github.kotlinmania.candle.Dim
 import io.github.kotlinmania.candle.Shape
-import io.github.kotlinmania.candle.ShapeDim
 import io.github.kotlinmania.candle.Tensor
 import io.github.kotlinmania.candle.applyOp1
 import io.github.kotlinmania.candle.applyOp1NoBwd
@@ -21,7 +21,6 @@ import io.github.kotlinmania.candle.applyOp2NoBwd
 import io.github.kotlinmania.candle.applyOp3NoBwd
 import io.github.kotlinmania.candle.bail
 import io.github.kotlinmania.candle.cat
-import io.github.kotlinmania.candle.toIndex
 import io.github.kotlinmania.candle.unaryMap
 import kotlin.math.exp
 import kotlin.math.sqrt
@@ -47,7 +46,7 @@ public fun softmax(
  */
 public fun softmax(
     xs: Tensor,
-    dim: ShapeDim,
+    dim: Dim,
 ): Tensor = softmax(xs, dim.toIndex(xs.shape(), "softmax"))
 
 public fun logSoftmax(
@@ -64,7 +63,7 @@ public fun logSoftmax(
 
 public fun logSoftmax(
     xs: Tensor,
-    dim: ShapeDim,
+    dim: Dim,
 ): Tensor = logSoftmax(xs, dim.toIndex(xs.shape(), "log-softmax"))
 
 public fun silu(xs: Tensor): Tensor = xs.silu()
@@ -102,7 +101,7 @@ internal class Sigmoid :
     }
 }
 
-internal fun Tensor.sumKeepdim(dim: ShapeDim): Tensor = sumKeepdim(dim.toIndex(shape(), "sum-keepdim"))
+internal fun Tensor.sumKeepdim(dim: Dim): Tensor = sumKeepdim(dim.toIndex(shape(), "sum-keepdim"))
 
 internal operator fun Tensor.plus(rhs: Double): Tensor = add(rhs)
 
